@@ -1,4 +1,4 @@
-import os, sys, base64, struct, socket, ssl
+import sys, base64, struct, os, socket, ssl, logging
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -7,12 +7,12 @@ from Crypto.Signature import pkcs1_15
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Util.Padding import pad, unpad
 from pathlib import Path
-from cryptography import x509
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
+# from cryptography import x509
+# from cryptography.hazmat.primitives import serialization
+# from cryptography.hazmat.backends import default_backend
+# from cryptography.hazmat.primitives import hashes
 
-CA_HOST = "10.10.55.10"
+logger = logging.getLogger()
 
 class SecureDropUtils:
     """
@@ -49,7 +49,7 @@ class SecureDropUtils:
         if not cls._instance:
             cls._instance = super(SecureDropUtils, cls).__new__(cls, *args, **kwargs)
         return cls._instance
-    
+        
     def __init__(self):
         if not hasattr(self, "_PUBLIC_KEY_PATH"):
             self._PUBLIC_KEY_PATH = str(Path(__file__).parent / ".keys/client.pub")
@@ -63,6 +63,8 @@ class SecureDropUtils:
             self.USER_JSON_PATH = str(Path(__file__).parent / ".db/user.json")
         if not hasattr(self, "CONTACTS_JSON_PATH"):
             self.CONTACTS_JSON_PATH = str(Path(__file__).parent / ".db/contacts.json")
+        if not hasattr(self, "LOG_FILE_PATH"):
+            self.LOG_FILE_PATH = str(Path(__file__).parent / ".db/secure_drop.log")
         if not hasattr(self, "_private_key"):
             self._private_key = None
         if not hasattr(self, "_public_key"):
@@ -83,7 +85,7 @@ class SecureDropUtils:
             signature = pkcs1_15.new(self._private_key).sign(hashed_data)
             
             result = (
-                b'ENCRYPTED\n' +
+                b"ENCRYPTED\n" +
                 struct.pack("I", len(session_key_encrypted)) + session_key_encrypted +
                 struct.pack("I", len(cipher_aes.nonce)) + cipher_aes.nonce +
                 struct.pack("I", len(tag)) + tag +
@@ -98,10 +100,10 @@ class SecureDropUtils:
         
     def pgp_decrypt_and_verify_data(self, data: bytes, sender_public_key: RSA.RsaKey) -> bytes:
         try:
-            if not data.startswith(b'ENCRYPTED\n'):
+            if not data.startswith(b"ENCRYPTED\n"):
                 raise ValueError("Invalid format.")
             
-            data = data[len(b'ENCRYPTED\n'):]
+            data = data[len(b"ENCRYPTED\n"):]
             offset = 0
 
             session_key_len = struct.unpack("I", data[offset:offset + 4])[0]
@@ -152,9 +154,9 @@ class SecureDropUtils:
         Encrypts and signs the given data using RSA and AES encryption algorithms.
         This method performs the following steps:
         1. Generates a random session key for AES encryption.
-        2. Encrypts the session key using the user's RSA public key.
+        2. Encrypts the session key using the user"s RSA public key.
         3. Encrypts the data using the AES session key in EAX mode.
-        4. Computes a SHA-512 hash of the data and signs it using the user's RSA private key.
+        4. Computes a SHA-512 hash of the data and signs it using the user"s RSA private key.
         5. Packages the encrypted session key, AES nonce, authentication tag, ciphertext, and signature into a single byte string.
         Args:
             data (bytes): The data to be encrypted and signed.
@@ -181,7 +183,7 @@ class SecureDropUtils:
             
             
             result = (
-                b'ENCRYPTED\n' +
+                b"ENCRYPTED\n" +
                 struct.pack("I", len(session_key_encrypted)) + session_key_encrypted +
                 struct.pack("I", len(cipher_aes.nonce)) + cipher_aes.nonce +
                 struct.pack("I", len(tag)) + tag +
@@ -206,11 +208,11 @@ class SecureDropUtils:
             ValueError: If the file format is invalid, the password is incorrect, or signature verification fails.
         """
         try:
-            if not data.startswith(b'ENCRYPTED\n'):
+            if not data.startswith(b"ENCRYPTED\n"):
                 print("Invalid file format or incorrect password.")
                 raise ValueError("Invalid file format or incorrect password.")
             
-            data = data[len(b'ENCRYPTED\n'):]
+            data = data[len(b"ENCRYPTED\n"):]
             offset = 0
     
             session_key_len = struct.unpack("I", data[offset:offset + 4])[0]
@@ -275,7 +277,7 @@ class SecureDropUtils:
             hasher.update(salt + data.encode("utf-8"))
             hashed_password = hasher.digest()
             
-            salt_b64 = base64.b64encode(salt).decode('utf-8')
+            salt_b64 = base64.b64encode(salt).decode("utf-8")
             hashed_password_b64 = base64.b64encode(hashed_password).decode("utf-8")
             
             salted_hash = f"${salt_b64}${hashed_password_b64}"
@@ -309,28 +311,43 @@ class SecureDropUtils:
             print("Exception:", sys.exc_info()[0])
             return False
 
-    # DEPRECATED
-    # def verify_key_pair(self) -> None:
-    #     try:
-    #         if not os.path.exists(self._PUBLIC_KEY_PATH) or not os.path.exists(self._PRIVATE_KEY_PATH):
-    #             os.makedirs(str(Path(__file__).parent / ".keys/"), exist_ok=True)  
+    def verify_key_pair(self) -> None:
+        try:
+            if not os.path.exists(self._PUBLIC_KEY_PATH) or not os.path.exists(self._PRIVATE_KEY_PATH):
+                raise FileNotFoundError("Key pair not found.")
+                # os.makedirs(str(Path(__file__).parent / ".keys/"), exist_ok=True)  
                               
-    #             private_key = RSA.generate(2048)
-    #             public_key = private_key.publickey()
-    #             self._private_key = private_key
-    #             self._public_key = public_key
+                # private_key = RSA.generate(2048)
+                # public_key = private_key.publickey()
+                # self._private_key = private_key
+                # self._public_key = public_key
                 
-    #             with open(self._PRIVATE_KEY_PATH, "wb") as private_file:
-    #                 private_file.write(private_key.export_key())
-    #                 os.chmod(self._PRIVATE_KEY_PATH, 0o660)
-    #             with open(self._PUBLIC_KEY_PATH, "wb") as public_file:
-    #                 public_file.write(public_key.export_key())
-    #                 os.chmod(self._PUBLIC_KEY_PATH, 0o660)
-        
-    #     except Exception as e:
-    #         print("An error occurred while verifying the key pair.")
-    #         print("Exception:", e)
-    #         sys.exit()
+                # with open(self._PRIVATE_KEY_PATH, "wb") as private_file:
+                #     private_file.write(private_key.export_key())
+                #     os.chmod(self._PRIVATE_KEY_PATH, 0o660)
+                # with open(self._PUBLIC_KEY_PATH, "wb") as public_file:
+                #     public_file.write(public_key.export_key())
+                #     os.chmod(self._PUBLIC_KEY_PATH, 0o660)
+            with open(self._PRIVATE_KEY_PATH, "rb") as file:
+                private_key = file.read()
+                if private_key.startswith(b"-----BEGIN RSA PRIVATE KEY-----"):
+                    try:
+                        self._private_key = RSA.import_key(private_key)
+                    except Exception as e:
+                        raise ValueError(f"Invalid private key format: {e}")
+                    
+            with open(self._PUBLIC_KEY_PATH, "rb") as file:
+                public_key = file.read()
+                if public_key.startswith(b"-----BEGIN PUBLIC KEY-----"):
+                    try:
+                        self._public_key = RSA.import_key(public_key)
+                    except Exception as e:
+                        raise ValueError(f"Invalid public key format: {e}")
+                    
+        except Exception as e:
+            print("An error occurred while verifying the key pair.")
+            print("Exception:", e)
+            sys.exit()
                 
     def encrypt_private_key(self, password: str) -> None:
         """
@@ -356,7 +373,7 @@ class SecureDropUtils:
             
             with open(self._PRIVATE_KEY_PATH, "wb") as file:
                 result = (
-                    b'ENCRYPTED\n' +
+                    b"ENCRYPTED\n" +
                     struct.pack("I", len(salt)) + salt +
                     struct.pack("I", len(cipher.nonce)) + cipher.nonce +
                     struct.pack("I", len(tag)) + tag +
@@ -379,7 +396,7 @@ class SecureDropUtils:
 
     #         with open(_PRIVATE_KEY_PATH, "wb") as file:
     #             result = (
-    #                 b'ENCRYPTED\n' +
+    #                 b"ENCRYPTED\n" +
     #                 struct.pack("I", len(exit_key_salt)) + exit_key_salt +
     #                 struct.pack("I", len(cipher.nonce)) + cipher.nonce +
     #                 struct.pack("I", len(tag)) + tag +
@@ -391,63 +408,63 @@ class SecureDropUtils:
     #         print("An error occurred while encrypting the private key with exit key.")
     #         print("Exception:", sys.exc_info()[0])
     
-    # DEPRECATED
-    # def decrypt_private_key(self, password: str) -> bool:
-    #     """
-    #     Decrypts the private key using the provided password.
-    #     This method attempts to decrypt the private key stored at the path specified by `_PRIVATE_KEY_PATH`.
-    #     If the private key is already in plaintext format, it will be re-encrypted using the provided password.
-    #     Otherwise, it will decrypt the private key using the provided password and the stored salt, nonce, and tag.
-    #     Args:
-    #         password (str): The password used to decrypt the private key.
-    #     Returns:
-    #         bool: True if the decryption is successful, False otherwise.
-    #     """
-    #     try:
-    #         with open(self._PRIVATE_KEY_PATH, "rb") as file:
-    #             data = file.read()
-    #             if data.startswith(b"-----BEGIN RSA PRIVATE KEY-----"):
-    #                 self.__encrypt_private_key(password)
-    #                 return True
-    #         with open(self._PRIVATE_KEY_PATH, "rb") as file:
-    #             data = file.read()
+    def decrypt_private_key(self, password: str) -> bool:
+        """
+        Decrypts the private key using the provided password.
+        This method attempts to decrypt the private key stored at the path specified by `_PRIVATE_KEY_PATH`.
+        If the private key is already in plaintext format, it will be re-encrypted using the provided password.
+        Otherwise, it will decrypt the private key using the provided password and the stored salt, nonce, and tag.
+        Args:
+            password (str): The password used to decrypt the private key.
+        Returns:
+            bool: True if the decryption is successful, False otherwise.
+        """
+        try:
+            with open(self._PRIVATE_KEY_PATH, "rb") as file:
+                data = file.read()
+                if data.startswith(b"-----BEGIN RSA PRIVATE KEY-----"):
+                    self.__encrypt_private_key(password)
+                    return True
+            with open(self._PRIVATE_KEY_PATH, "rb") as file:
+                data = file.read()
             
-    #         if not data.startswith(b'ENCRYPTED\n'):
-    #             return False
+            if not data.startswith(b"ENCRYPTED\n"):
+                return False
             
-    #         data = data[len(b'ENCRYPTED\n'):]
-    #         offset = 0
+            data = data[len(b"ENCRYPTED\n"):]
+            offset = 0
     
-    #         salt_len = struct.unpack("I", data[offset:offset + 4])[0]
-    #         offset += 4
-    #         salt = data[offset:offset + salt_len]
-    #         offset += salt_len
+            salt_len = struct.unpack("I", data[offset:offset + 4])[0]
+            offset += 4
+            salt = data[offset:offset + salt_len]
+            offset += salt_len
 
-    #         nonce_len = struct.unpack("I", data[offset:offset + 4])[0]
-    #         offset += 4
-    #         nonce = data[offset:offset + nonce_len]
-    #         offset += nonce_len
+            nonce_len = struct.unpack("I", data[offset:offset + 4])[0]
+            offset += 4
+            nonce = data[offset:offset + nonce_len]
+            offset += nonce_len
 
-    #         tag_len = struct.unpack("I", data[offset:offset + 4])[0]
-    #         offset += 4
-    #         tag = data[offset:offset + tag_len]
-    #         offset += tag_len
+            tag_len = struct.unpack("I", data[offset:offset + 4])[0]
+            offset += 4
+            tag = data[offset:offset + tag_len]
+            offset += tag_len
             
-    #         ciphertext_len = struct.unpack("I", data[offset:offset + 4])[0]
-    #         offset += 4
-    #         ciphertext = data[offset:offset + ciphertext_len]
-    #         offset += ciphertext_len
+            ciphertext_len = struct.unpack("I", data[offset:offset + 4])[0]
+            offset += 4
+            ciphertext = data[offset:offset + ciphertext_len]
+            offset += ciphertext_len
 
 
-    #         key = PBKDF2(password, salt, 32, count=1000000, hmac_hash_module=SHA512)
+            key = PBKDF2(password, salt, 32, count=1000000, hmac_hash_module=SHA512)
 
-    #         cipher = AES.new(key, AES.MODE_EAX, nonce)
-    #         private_key = cipher.decrypt_and_verify(ciphertext, tag)
+            cipher = AES.new(key, AES.MODE_EAX, nonce)
+            private_key = cipher.decrypt_and_verify(ciphertext, tag)
             
-    #         self._private_key = RSA.import_key(private_key)
-    #         with open(self._PUBLIC_KEY_PATH, "r") as file:
-    #             self._public_key = RSA.import_key(file.read())
+            self._private_key = RSA.import_key(private_key)
+            with open(self._PUBLIC_KEY_PATH, "r") as file:
+                self._public_key = RSA.import_key(file.read())
             
-    #         return True
-    #     except Exception as e:
-    #         return False
+            return True
+        except Exception as e:
+            return False
+        

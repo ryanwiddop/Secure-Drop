@@ -1,14 +1,16 @@
-import json, sys, os, socket, ssl
+import json, sys, os, logging
 from getpass import getpass
 from Crypto.PublicKey import RSA
 from secure_drop_utils import SecureDropUtils
 from pathlib import Path
 
+logger = logging.getLogger()
+
 def __get_registered_user() -> bool:
     """
     Checks if a registered user exists by reading and validating the user data from a file.
     The function attempts to read the user data from a file specified by USER_JSON_PATH.
-    It checks if the data starts with the string 'ENCRYPTED\n' and if the length of the data
+    It checks if the data starts with the string "ENCRYPTED\n" and if the length of the data
     is greater than 9 bytes. If these conditions are met, it returns True indicating that
     a registered user exists. Otherwise, it returns False.
     Returns:
@@ -25,7 +27,7 @@ def __get_registered_user() -> bool:
         try:
             with open(sdutils.USER_JSON_PATH, "rb") as file:
                 data = file.read()
-            if not data.startswith(b'ENCRYPTED\n') or len(data) <= 9:
+            if not data.startswith(b"ENCRYPTED\n") or len(data) <= 9:
                 return False
         
         except KeyError:
@@ -73,8 +75,8 @@ def __register_new_user(username: str, email: str, password: str) -> None:
             
 def __verify_user(email: str, password: str) -> bool: 
     """
-    Verifies the user's email and password.
-    This function attempts to verify a user's email and password by decrypting
+    Verifies the user"s email and password.
+    This function attempts to verify a user"s email and password by decrypting
     and verifying the stored user data. If the verification is successful, it
     sets the user information in the system.
     Args:
@@ -103,7 +105,6 @@ def __verify_user(email: str, password: str) -> bool:
                 user = json.loads(user_data.decode("utf-8"))
             
             if user["email"] == email and sdutils.verify_hash(password, user["password"]):
-                sdutils.set_user(user["username"], user["email"])
                 return True
             else:
                 sdutils.encrypt_private_key(password)
@@ -115,7 +116,7 @@ def __verify_user(email: str, password: str) -> bool:
             print("Error decoding JSON from the file.")
             sys.exit()
     except Exception as e:
-        print("Error verifying user.")
+        print("Error verifying user")
         print("Exception:", e)
         return False
                  
@@ -126,13 +127,13 @@ def startup() -> None:
     1. Verifies the key pair using `sdutils.verify_key_pair()`.
     2. Checks if there are any registered users.
        - If no users are registered, prompts the user to register a new user.
-         - Collects the user's full name, email address, and password.
+         - Collects the user"s full name, email address, and password.
          - Ensures the password and re-entered password match.
          - Registers the new user and encrypts the private key with the password.
          - Exits the program after registration.
        - If users are already registered, prompts the user to log in.
-         - Collects the user's email address and password.
-         - Verifies the user's credentials.
+         - Collects the user"s email address and password.
+         - Verifies the user"s credentials.
          - If the credentials are invalid, prompts the user to re-enter them.
          - If the credentials are valid, welcomes the user.
     If an error occurs during the startup process (excluding SystemExit), 
@@ -142,9 +143,9 @@ def startup() -> None:
     """
     try:
         sdutils = SecureDropUtils()
-        sdutils.verify_key_pair()
 
         if not __get_registered_user():
+            sdutils.verify_key_pair()
             print("No users are registered with this client.")
             if(input("Do you want to register a new user (y/n)? ") == "y"):
                 name = input("Enter Full Name: ")
@@ -158,17 +159,20 @@ def startup() -> None:
                 else:
                     print("\nPasswords Match.")
                 __register_new_user(name, email, password)
+                
+                logging.info("User Registered")
                 print("User Registered\n")
                 sdutils.encrypt_private_key(password)
+                
                 password = None
                 repassword = None
-                sdutils.get_ca_cert()
-                sdutils.get_client_cert(name, email)
                 
                 print("Exiting SecureDrop.")
+                logging.info("Exiting SecureDrop.")
                 sys.exit()
             else:
                 print("Exiting SecureDrop.")
+                logging.info("Exiting SecureDrop.")
                 sys.exit()
         else:
             email = input("Enter Email Address: ")
@@ -179,8 +183,10 @@ def startup() -> None:
                 email = input("Enter Email Address: ")
                 password = getpass("Enter Password: ")
             print("Username and Password verified. Welcome.")
+            logging.info("User Verified")
             password = None
     except Exception as e:
         print("An error occurred during startup.")
         print("Exception:", e)
+        logging.error(f"An error occurred during startup: {e}")
         sys.exit()

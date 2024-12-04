@@ -1,5 +1,7 @@
 from secure_drop_utils import SecureDropUtils
-import os, json, sys, socket
+import os, json, sys, socket, logging
+
+logger = logging.getLogger()
 
 def __verify_contact_file() -> None:
     """
@@ -67,7 +69,9 @@ def add() -> None:
         email = input("  Enter Email Address: ")
         new_contact = {
             "name": name,
-            "email": email
+            "email": email,
+            "online": False,
+            "known_host": None
         }
         
         with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
@@ -83,9 +87,11 @@ def add() -> None:
             file.write(sdutils.encrypt_and_sign(json.dumps({"contacts": contacts}).encode("utf-8")))
 
         print("  Contact Added.\n")
+        logger.info(f"Added contact.")
     except Exception as e:
         print("An error occurred while adding the contact.")
         print("Exception:", e)
+        logger.error(f"Error adding contact: {e}")
         sys.exit()
 
 def list() -> None:

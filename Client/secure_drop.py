@@ -1,6 +1,7 @@
-import sys, subprocess
+import sys, subprocess, logging
 from registration import startup
 from contacts import add, list
+from secure_drop_utils import SecureDropUtils
 
 def start_secure_drop_server():
     with open("server.log", "w") as file:
@@ -32,8 +33,20 @@ def secure_drop_shell():
 
 
 def main():
+    sdutils = SecureDropUtils()
+    logging.basicConfig(
+    filename=sdutils.LOG_FILE_PATH,
+    level=logging.INFO,
+    format="%(asctime)s CLIENT | %(levelname)s: %(message)s"
+    )
+    logger = logging.getLogger()
+    
     try:
         startup()
+    except KeyboardInterrupt:
+        print("\nExiting Secure Drop.")
+        logger.info("Exiting Secure Drop.")
+        exit()
     except SystemExit:
         exit()
     
@@ -47,7 +60,12 @@ def main():
         exit()
     
     try:
+        logger.info("Secure Drop started.")
         secure_drop_shell()
+    except KeyboardInterrupt:
+        print("\nExiting Secure Drop.")
+        logger.info("Exiting Secure Drop.")
+        exit()
     except SystemExit:
         exit()
     except Exception as e:

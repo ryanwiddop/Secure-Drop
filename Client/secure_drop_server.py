@@ -8,13 +8,6 @@ from cryptography.hazmat.primitives import serialization
 from Crypto.Hash import SHA512
 from Crypto.Hash import HMAC
 
-logging.basicConfig(
-    filename='secure_drop.log',
-    level=logging.INFO,
-    format='%(asctime)s SERVER | %(levelname)s: %(message)s'
-)
-logger = logging.getLogger()
-
 def handle_client(conn, addr, context):
     """
     Handles the client connection, performs SSL handshake, exchanges encrypted data,
@@ -102,7 +95,15 @@ def main():
     """
     sdutils = SecureDropUtils()
     
-    HOST = ''
+    logging.basicConfig(
+        filename=sdutils.SERVER_LOG_PATH,
+        level=logging.INFO,
+        format="%(asctime)s SERVER | %(levelname)s: %(message)s"
+    )
+    global logger 
+    logger = logging.getLogger()
+    
+    HOST = ""
     PORT = 23325
     
     server_socket = socket.socket()
