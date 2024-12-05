@@ -77,7 +77,7 @@ def sync_contacts():
     
     while True:
         try:
-            response, addr = client_discovery_socket.recvfrom(1024)
+            response, addr = client_discovery_socket.recvfrom(4096)
             if addr[0] == own_ip:
                 continue
             
@@ -96,7 +96,7 @@ def sync_contacts():
         except socket.timeout:
             pass
         except Exception as e:
-            logger.info(f"Certificate verification failed for {addr}: {e}")
+            logger.info(f"Exception caught while syncing contacts: {addr}: {e}")
         if time.time() - start_time > 2:
             break
     client_discovery_socket.close() 
@@ -165,7 +165,7 @@ def sync_contacts():
                 
             client_socket.close()
         except Exception as e:
-            logger.warning(f"Failed to sync contacts with {server}: {e}")
+            logger.warning(f"Failed to sync contacts: {e}")
             client_socket.close()
             continue
     
