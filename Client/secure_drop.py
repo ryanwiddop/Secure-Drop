@@ -1,14 +1,25 @@
 import sys, subprocess, logging
 from registration import startup
-from contacts import add, list
+from contacts import add_contact, list_contacts
 from secure_drop_utils import SecureDropUtils
+from pathlib import Path
 
-def start_secure_drop_server():
-    with open("server.log", "w") as file:
-        file.write("Server starting.\n")
-    with open("server.log", "a") as file:
-        process = subprocess.Popen(["python3", "secure_drop_server.py"], stdout=file, stderr=file)
-        file.write("Server started.\n")
+def start_secure_drop_server() -> subprocess.Popen:
+    sdutils = SecureDropUtils()
+    server_path = str(Path(__file__).parent / "secure_drop_server.py")
+    private_key = sdutils._private_key.export_key().decode("utf-8")
+    
+    process = subprocess.Popen(
+        ["python3", server_path],
+        stdin=subprocess.PIPE,
+        text=True
+    )
+    process.stdin.write(private_key)
+    process.stdin.write("\n")
+    process.stdin.write(sdutils._username)
+    process.stdin.write("\n")
+    process.stdin.write(sdutils._email)
+    process.stdin.close()
     return process
 
 def secure_drop_shell():
@@ -22,9 +33,9 @@ def secure_drop_shell():
             print("  \"send\" -> Transfer file to contact")
             print("  \"exit\" -> Exit SecureDrop")
         elif command == "add":
-            add()
+            add_contact()
         elif command == "list":
-            list()
+            list_contacts()
         elif command == "send":
             # UDP or !TLS!
             pass
@@ -39,19 +50,22 @@ def main():
     level=logging.INFO,
     format="%(asctime)s CLIENT | %(levelname)s: %(message)s"
     )
-    logger = logging.getLogger()
-    
+    logger = logging.getLogger()    
     try:
         startup()
     except KeyboardInterrupt:
         print("\nExiting Secure Drop.")
         logger.info("Exiting Secure Drop.")
+        logger.info("-" * 50)
         exit()
     except SystemExit:
+        print("\nExiting Secure Drop.")
+        logger.info("Exiting Secure Drop.")
+        logger.info("-" * 50)
         exit()
     
     try:
-        start_secure_drop_server()
+        process = start_secure_drop_server()
     except SystemExit:
         exit()
     except Exception as e:
@@ -65,15 +79,22 @@ def main():
     except KeyboardInterrupt:
         print("\nExiting Secure Drop.")
         logger.info("Exiting Secure Drop.")
+        logger.info("-" * 50)
+        process.terminate()
         exit()
     except SystemExit:
+        process.terminate()
+        logger.info("Exiting Secure Drop.")
+        logger.info("-" * 50)
         exit()
     except Exception as e:
+        process.terminate()
         print("An error occurred.")
         print("Exception:", e)
+        logger.error(f"An error occurred: {e}")
+        logger.info("Exiting Secure Drop.")
+        logger.info("-" * 50)
         exit()
         
-        
-
 if __name__ == "__main__":
     main()

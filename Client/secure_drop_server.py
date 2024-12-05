@@ -1,4 +1,4 @@
-import socket, ssl, threading, logging
+import socket, ssl, threading, logging, tempfile, os, sys
 from secure_drop_utils import SecureDropUtils
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -32,9 +32,9 @@ def handle_client(conn, addr, context):
         sender_public_key = RSA.import_key(sender_public_key_bytes)
 
         # Send IP address to client
-        response = conn.getsockname()[0]
-        encrypted_response = sdutils.pgp_encrypt_and_sign_data(response, sender_public_key)
-        conn.sendall(encrypted_response)
+        # response = conn.getsockname()[0]
+        # encrypted_response = sdutils.pgp_encrypt_and_sign_data(response, sender_public_key)
+        # conn.sendall(encrypted_response)
 
         # Generate shared secret key
         shared_secret_key = get_random_bytes(32)
@@ -85,7 +85,38 @@ def handle_client(conn, addr, context):
     finally:
         conn.close()
         return
+
+def discovery_server():
+    """
+    Sets up a discovery server to listen for incoming broadcast messages from clients.
+    """
+    PORT = 23326
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    client_socket.bind(("", PORT))
+    logger.info(f"Discovery server listening on port {PORT}")
     
+    while True:
+        try:
+            data, addr = client_socket.recvfrom(1024)
+            logger.info(f"Dicovery request received from {addr}")
+            if data == b"DISCOVER_SECURE_DROP":
+                cert = x509.load_pem_x509_certificate(open(SecureDropUtils.CLIENT_CERT_PATH, "rb").read(), default_backend())
+                response = cert.public_bytes(serialization.Encoding.PEM)
+                client_socket.sendto(response, addr)
+                logger.info(f"Sent certificate to {addr}")
+            else:
+                logger.warning(f"Invalid discovery request received from {addr}")
+        except KeyboardInterrupt:
+            logger.info("Stopping discovery server...")
+            break
+        except Exception as e:
+            logger.info("Stopping discovery server... {e}")
+            break
+    
+    client_socket.close()
+    logger.info("Discovery server stopped")
+
 def main():
     """
     Sets up the server socket, binds it to a port, listens for incoming connections,
@@ -94,40 +125,60 @@ def main():
     Uses SSL for secure communication and logs important events.
     """
     sdutils = SecureDropUtils()
-    
     logging.basicConfig(
-        filename=sdutils.SERVER_LOG_PATH,
+        filename=sdutils.LOG_FILE_PATH,
         level=logging.INFO,
         format="%(asctime)s SERVER | %(levelname)s: %(message)s"
     )
     global logger 
     logger = logging.getLogger()
     
+    parent_input = sys.stdin.read().splitlines()
+    private_key_str = parent_input[0]
+    username = parent_input[1]
+    email = parent_input[2]
+        
+    if not private_key_str:
+        logger.error("Failed to read PRIVATE_KEY from stdin")
+        return
+    private_key = RSA.import_key(private_key_str)
+    
+    sdutils._private_key = private_key
+    sdutils._username = username
+    sdutils._email = email
+    
     HOST = ""
     PORT = 23325
     
-    server_socket = socket.socket()
-    server_socket.bind((HOST, PORT))
-    logger.info(f"Socket bound to port {PORT}")
-    
-    server_socket.listen(5)
-    logger.info("Socket is listening...")
-    
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=sdutils.CLIENT_KEY_PATH)
+    with tempfile.NamedTemporaryFile() as private_key_file:
+        private_key_file.write(private_key.export_key())
+        private_key_file.flush()
+        private_key_file.seek(0)
+        context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=private_key_file.name)
+    context.load_verify_locations(cafile=sdutils.CA_CERT_PATH)
     
-    while True:
-        try:
-            conn, addr = server_socket.accept()
-            logger.info(f"Accepted connection from {addr}")
-            client_thread = threading.Thread(target=handle_client, args=(conn, addr, context))
-            client_thread.start()
-        except KeyboardInterrupt:
-            logger.info("Closing socket...")
-            server_socket.close()
-            break
+    discovery_server_thread = threading.Thread(target=discovery_server)
+    discovery_server_thread.start()
+    
+    with socket.socket() as server_socket:
+        server_socket.bind((HOST, PORT))
+        logger.info(f"Socket bound to port {PORT}")
+        
+        server_socket.listen(5)
+        logger.info("Socket is listening...")
+        
+        while True:
+            try:
+                conn, addr = server_socket.accept()
+                logger.info(f"Accepted connection from {addr}")
+                client_thread = threading.Thread(target=handle_client, args=(conn, addr, context))
+                client_thread.start()
+            except KeyboardInterrupt:
+                logger.info("Closing socket...")
+                break
     
     logger.info("Socket closed")
-        
+    
 if __name__ == "__main__":
     main()

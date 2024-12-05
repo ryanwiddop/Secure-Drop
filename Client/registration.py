@@ -105,9 +105,10 @@ def __verify_user(email: str, password: str) -> bool:
                 user = json.loads(user_data.decode("utf-8"))
             
             if user["email"] == email and sdutils.verify_hash(password, user["password"]):
+                sdutils._username = user["username"]
+                sdutils._email = user["email"]
                 return True
             else:
-                sdutils.encrypt_private_key(password)
                 return False
         except FileNotFoundError:
             print(f"File not found: {sdutils.USER_JSON_PATH}")

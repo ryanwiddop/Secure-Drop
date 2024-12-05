@@ -69,6 +69,10 @@ class SecureDropUtils:
             self._private_key = None
         if not hasattr(self, "_public_key"):
             self._public_key = None
+        if not hasattr(self, "_username"):
+            self._username = None
+        if not hasattr(self, "_email"):
+            self._email = None
 
     def pgp_encrypt_and_sign_data(self, data: str, recipient_public_key: RSA.RsaKey) -> bytes:
         try:
@@ -423,14 +427,13 @@ class SecureDropUtils:
             with open(self._PRIVATE_KEY_PATH, "rb") as file:
                 data = file.read()
                 if data.startswith(b"-----BEGIN RSA PRIVATE KEY-----"):
-                    self.__encrypt_private_key(password)
+                    self.encrypt_private_key(password)
                     return True
             with open(self._PRIVATE_KEY_PATH, "rb") as file:
                 data = file.read()
-            
             if not data.startswith(b"ENCRYPTED\n"):
                 return False
-            
+        
             data = data[len(b"ENCRYPTED\n"):]
             offset = 0
     
@@ -463,8 +466,10 @@ class SecureDropUtils:
             self._private_key = RSA.import_key(private_key)
             with open(self._PUBLIC_KEY_PATH, "r") as file:
                 self._public_key = RSA.import_key(file.read())
-            
+                
             return True
         except Exception as e:
+            print("An error occurred while decrypting the private key with password.")
+            print("Exception:", e)
             return False
         
