@@ -121,8 +121,8 @@ def sync_contacts():
                 context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=private_key_file.name)
             client_socket = context.wrap_socket(client_socket, server_hostname="SecureDrop")
                     
-            cryptography_server_cert = client_socket.getpeercert()
-            cryptography_server_cert = x509.load_pem_x509_certificate(cryptography_server_cert, default_backend())
+            cryptography_server_cert_der = client_socket.getpeercert(binary_form=True)
+            cryptography_server_cert = x509.load_der_x509_certificate(cryptography_server_cert_der, default_backend())
             cryptography_server_public_key = cryptography_server_cert.public_key()
             sender_public_key_bytes = cryptography_server_public_key.public_bytes(
                 encoding=serialization.Encoding.PEM, 
