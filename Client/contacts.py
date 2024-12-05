@@ -151,8 +151,8 @@ def sync_contacts():
             
             encrypted_server_name = client_socket.recv(1024)
             encrypted_server_email = client_socket.recv(1024)
-            server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key)
-            server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
+            server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key).decode("utf-8")
+            server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key).decode("utf-8")
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())
@@ -160,15 +160,14 @@ def sync_contacts():
                     logger.warning("Failed to decrypt and verify contacts data")
                     continue
                 
-                # Check if data is a dictionary and convert it to bytes if necessary
                 if isinstance(data, dict):
                     data = json.dumps(data).encode('utf-8')
                 
                 data = json.loads(data.decode("utf-8"))
                 contacts = data["contacts"]
-                for contact in contacts:
-                    if contact["name"] == server_name and contact["email"] == server_email:
-                        contact["online"] = True
+            for contact in contacts:
+                if contact["name"] == server_name and contact["email"] == server_email:
+                    contact["online"] = True
             
             with open(sdutils.CONTACTS_JSON_PATH, "wb") as file:
                 file.write(sdutils.encrypt_and_sign(json.dumps({"contacts": contacts}).encode("utf-8")))
