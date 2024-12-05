@@ -15,7 +15,6 @@ def start_secure_drop_server() -> subprocess.Popen:
         text=True
     )
     process.stdin.write(private_key)
-    process.stdin.write("\n")
     process.stdin.write(sdutils._username)
     process.stdin.write("\n")
     process.stdin.write(sdutils._email)

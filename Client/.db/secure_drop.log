@@ -158,3 +158,144 @@
 2024-12-04 21:42:50,368 SERVER | INFO: Closing socket...
 2024-12-04 21:42:50,369 CLIENT | INFO: Exiting Secure Drop.
 2024-12-04 21:42:50,370 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:08:18,954 CLIENT | INFO: User Verified
+2024-12-05 04:08:18,963 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:09:58,663 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:09:58,663 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:10:08,183 CLIENT | INFO: User Verified
+2024-12-05 04:10:08,192 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:14:26,547 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:14:26,547 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:14:38,096 CLIENT | INFO: User Verified
+2024-12-05 04:14:38,104 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:15:06,536 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:15:06,537 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:15:16,516 CLIENT | INFO: User Verified
+2024-12-05 04:15:16,524 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:15:57,366 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:15:57,366 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:16:12,289 CLIENT | INFO: User Verified
+2024-12-05 04:16:12,297 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:16:12,460 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:16:12,460 SERVER | INFO: Socket bound to port 23325
+2024-12-05 04:16:12,460 SERVER | INFO: Socket is listening...
+2024-12-05 04:16:30,548 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:16:30,548 SERVER | INFO: Closing socket...
+2024-12-05 04:16:30,548 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:16:40,407 CLIENT | INFO: User Verified
+2024-12-05 04:16:40,416 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:16:40,572 SERVER | INFO: Socket bound to port 23325
+2024-12-05 04:16:40,572 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:16:40,572 SERVER | INFO: Socket is listening...
+2024-12-05 04:18:21,263 SERVER | INFO: Closing socket...
+2024-12-05 04:18:21,263 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:18:21,263 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:18:21,263 SERVER | INFO: Socket closed
+2024-12-05 04:18:33,998 CLIENT | INFO: User Verified
+2024-12-05 04:18:34,006 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:18:34,166 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:18:34,166 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:21:19,454 SERVER | INFO: Closing socket...
+2024-12-05 04:21:19,454 SERVER | INFO: Socket closed
+2024-12-05 04:21:19,454 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:21:19,454 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:21:34,503 CLIENT | INFO: User Verified
+2024-12-05 04:21:34,512 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:21:34,670 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:21:34,671 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:24:54,246 SERVER | INFO: Closing socket...
+2024-12-05 04:24:54,246 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:24:54,246 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:24:54,246 SERVER | INFO: Socket closed
+2024-12-05 04:25:21,742 CLIENT | INFO: User Verified
+2024-12-05 04:25:21,751 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:25:21,902 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:25:21,902 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:25:46,103 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:25:46,103 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:25:46,103 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:26:04,886 CLIENT | INFO: User Verified
+2024-12-05 04:26:04,894 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:26:05,049 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:26:05,049 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:26:21,693 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:26:21,693 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:27:00,982 CLIENT | INFO: User Verified
+2024-12-05 04:27:00,991 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:27:01,142 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:27:01,142 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:27:03,062 SERVER | INFO: Dicovery request received from ('10.10.55.2', 34040)
+2024-12-05 04:27:03,063 SERVER | WARNING: Invalid discovery request received from ('10.10.55.2', 34040)
+2024-12-05 04:28:09,660 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:28:09,660 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:28:09,660 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:32:42,360 CLIENT | INFO: User Verified
+2024-12-05 04:32:42,368 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:32:42,526 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:32:42,526 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:32:59,001 SERVER | INFO: Dicovery request received from ('10.10.55.2', 42340)
+2024-12-05 04:32:59,001 SERVER | INFO: Stopping discovery server... {e}
+2024-12-05 04:32:59,001 SERVER | INFO: Discovery server stopped
+2024-12-05 04:34:18,351 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:34:18,351 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:34:32,296 CLIENT | INFO: User Verified
+2024-12-05 04:34:32,305 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:34:32,463 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:34:32,463 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:34:34,122 SERVER | INFO: Dicovery request received from ('10.10.55.2', 49003)
+2024-12-05 04:34:34,123 SERVER | INFO: Stopping discovery server... {e}
+2024-12-05 04:34:34,123 SERVER | INFO: Discovery server stopped
+2024-12-05 04:37:03,885 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:37:03,885 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:37:03,885 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:37:16,954 CLIENT | INFO: User Verified
+2024-12-05 04:37:16,962 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:37:17,122 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:37:17,122 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:37:18,559 SERVER | INFO: Dicovery request received from ('10.10.55.2', 44810)
+2024-12-05 04:37:18,560 SERVER | INFO: Stopping discovery server... {e}
+2024-12-05 04:37:18,561 SERVER | INFO: Discovery server stopped
+2024-12-05 04:38:50,871 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:38:50,871 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:38:50,871 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:39:05,276 CLIENT | INFO: User Verified
+2024-12-05 04:39:05,284 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:39:05,444 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:39:05,444 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:39:07,183 SERVER | INFO: Dicovery request received from ('10.10.55.2', 45846)
+2024-12-05 04:39:07,183 SERVER | INFO: Stopping discovery server... type object 'SecureDropUtils' has no attribute 'CLIENT_CERT_PATH'
+2024-12-05 04:39:07,183 SERVER | INFO: Discovery server stopped
+2024-12-05 04:41:15,204 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:41:15,205 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:41:15,205 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:41:26,112 CLIENT | INFO: User Verified
+2024-12-05 04:41:26,120 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:41:26,279 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:41:26,279 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:41:28,038 SERVER | INFO: Dicovery request received from ('10.10.55.2', 54370)
+2024-12-05 04:41:28,081 SERVER | INFO: Sent certificate to ('10.10.55.2', 54370)
+2024-12-05 04:44:21,193 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:44:21,193 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:44:21,193 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:44:32,193 CLIENT | INFO: User Verified
+2024-12-05 04:44:32,200 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:44:32,354 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:44:32,354 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:44:34,275 SERVER | INFO: Dicovery request received from ('10.10.55.2', 34551)
+2024-12-05 04:44:34,300 SERVER | INFO: Sent certificate to ('10.10.55.2', 34551)
+2024-12-05 04:45:50,221 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:45:50,221 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:45:50,221 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:45:58,487 CLIENT | INFO: User Verified
+2024-12-05 04:45:58,496 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:45:58,653 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:45:58,654 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:45:59,979 SERVER | INFO: Dicovery request received from ('10.10.55.2', 59201)
+2024-12-05 04:46:00,004 SERVER | INFO: Sent certificate to ('10.10.55.2', 59201)
+2024-12-05 04:46:37,922 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:46:37,922 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:46:37,922 CLIENT | INFO: --------------------------------------------------
+2024-12-05 04:46:53,651 CLIENT | INFO: User Verified
+2024-12-05 04:46:53,660 CLIENT | INFO: Secure Drop started.
+2024-12-05 04:46:53,815 SERVER | INFO: Secure Drop Server listening on port 23325...
+2024-12-05 04:46:53,818 SERVER | INFO: Discovery server listening on port 23326

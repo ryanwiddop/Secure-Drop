@@ -2,14 +2,10 @@ from secure_drop_utils import SecureDropUtils
 import os, json, sys, socket, logging, ssl, time, tempfile
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from cryptography.x509 import CertificateStore
-from cryptography.x509 import CertificateStoreContext
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA512
-from Crypto.Signature import pkcs1_15
-from Crypto.Random import get_random_bytes
 from Crypto.Hash import HMAC
 
 logger = logging.getLogger()
@@ -51,7 +47,7 @@ def _verify_contact_file() -> None:
         print("Exception:", e)
         sys.exit()
 
-def sync_contacts(contacts):
+def sync_contacts():
     """
     Synchronizes the contacts with the server.
 
@@ -73,37 +69,40 @@ def sync_contacts(contacts):
     client_discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client_discovery_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     client_discovery_socket.settimeout(2)
-    client_discovery_socket.sendto(b"DISCOVER", ("<broadcast>", DISCOVERY_PORT))
+    client_discovery_socket.sendto(b"DISCOVER_SECURE_DROP", ("<broadcast>", DISCOVERY_PORT))
     
     start_time = time.time()
     
     while True:
         try:
             response, addr = client_discovery_socket.recvfrom(1024)
+            
             server_cert = x509.load_pem_x509_certificate(response, default_backend())
             with open(sdutils.CA_CERT_PATH, "rb") as file:
                 ca_cert = x509.load_pem_x509_certificate(file.read(), default_backend())
             
-            store = CertificateStore()
-            store.add_cert(ca_cert)
-            store_ctx = CertificateStoreContext(store, server_cert)
-            store_ctx.verify_certificate()
+            ca_public_key = ca_cert.public_key()
+            ca_public_key.verify(
+                server_cert.signature,
+                server_cert.tbs_certificate_bytes,
+                server_cert.signature_hash_algorithm
+            )
+            servers.append(addr)
             
-            client_socket.connect((server, SERVER_PORT))
-            
-            if time.time() - start_time > 2:
-                break
         except socket.timeout:
             pass
         except Exception as e:
             logger.info(f"Certificate verification failed for {addr}: {e}")
+        if time.time() - start_time > 2:
+            break
     client_discovery_socket.close() 
             
 
     for server in servers:
         try:
+            print()
             client_socket = socket.socket()
-            client_socket.connect(server, SERVER_PORT)
+            client_socket.connect((server[0], SERVER_PORT))
             context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
             context.verify_mode = ssl.CERT_REQUIRED
             context.load_verify_locations(sdutils.CA_CERT_PATH)
@@ -142,8 +141,10 @@ def sync_contacts(contacts):
             command = sdutils.pgp_encrypt_and_sign_data(b"SYNC_CONTACTS", sender_public_key)
             client_socket.send(command)
             
-            server_name = client_socket.recv(1024)
-            server_email = client_socket.recv(1024)
+            encrypted_server_name = client_socket.recv(1024)
+            encrypted_server_email = client_socket.recv(1024)
+            server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key)
+            server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())

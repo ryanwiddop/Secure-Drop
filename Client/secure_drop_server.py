@@ -66,7 +66,10 @@ def handle_client(conn, addr, context):
             conn.close()
             return
         elif command == b"SYNC_CONTACTS":
-            pass
+            encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username.encode("utf-8"), sender_public_key)
+            encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email.encode("utf-8"), sender_public_key)
+            conn.sendall(encrypted_username)
+            conn.sendall(encrypted_email)
         elif command == b"SEND_FILE":
             pass
         
@@ -90,32 +93,40 @@ def discovery_server():
     """
     Sets up a discovery server to listen for incoming broadcast messages from clients.
     """
-    PORT = 23326
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    client_socket.bind(("", PORT))
-    logger.info(f"Discovery server listening on port {PORT}")
-    
-    while True:
-        try:
-            data, addr = client_socket.recvfrom(1024)
-            logger.info(f"Dicovery request received from {addr}")
-            if data == b"DISCOVER_SECURE_DROP":
-                cert = x509.load_pem_x509_certificate(open(SecureDropUtils.CLIENT_CERT_PATH, "rb").read(), default_backend())
-                response = cert.public_bytes(serialization.Encoding.PEM)
-                client_socket.sendto(response, addr)
-                logger.info(f"Sent certificate to {addr}")
-            else:
-                logger.warning(f"Invalid discovery request received from {addr}")
-        except KeyboardInterrupt:
-            logger.info("Stopping discovery server...")
-            break
-        except Exception as e:
-            logger.info("Stopping discovery server... {e}")
-            break
-    
-    client_socket.close()
-    logger.info("Discovery server stopped")
+    try:
+        sdutils = SecureDropUtils()
+        PORT = 23326
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        client_socket.bind(("", PORT))
+        own_ip = socket.gethostbyname(socket.gethostname())
+        logger.info(f"Discovery server listening on port {PORT}")
+        
+        while True:
+            try:
+                data, addr = client_socket.recvfrom(1024)
+                if addr[0] == own_ip:
+                    continue
+                logger.info(f"Dicovery request received from {addr}")
+                if data == b"DISCOVER_SECURE_DROP":
+                    cert = x509.load_pem_x509_certificate(open(sdutils.CLIENT_CERT_PATH, "rb").read(), default_backend())
+                    response = cert.public_bytes(serialization.Encoding.PEM)
+                    client_socket.sendto(response, addr)
+                    logger.info(f"Sent certificate to {addr}")
+                else:
+                    logger.warning(f"Invalid discovery request received from {addr}")
+            except KeyboardInterrupt:
+                logger.info("Stopping discovery server...")
+                break
+            except Exception as e:
+                logger.info(f"Stopping discovery server... {e}")
+                break
+        
+        client_socket.close()
+        logger.info("Discovery server stopped")
+    except Exception as e:
+        client_socket.close()
+        logger.info("Discovery server stopped {e}")
 
 def main():
     """
@@ -133,10 +144,11 @@ def main():
     global logger 
     logger = logging.getLogger()
     
-    parent_input = sys.stdin.read().splitlines()
-    private_key_str = parent_input[0]
-    username = parent_input[1]
-    email = parent_input[2]
+    parent_input = sys.stdin.read().split("-----END RSA PRIVATE KEY-----")
+    private_key_str = parent_input[0] + "-----END RSA PRIVATE KEY-----"
+    username_and_email = parent_input[1].split("\n")
+    username = username_and_email[0]
+    email = username_and_email[1]
         
     if not private_key_str:
         logger.error("Failed to read PRIVATE_KEY from stdin")
@@ -163,10 +175,9 @@ def main():
     
     with socket.socket() as server_socket:
         server_socket.bind((HOST, PORT))
-        logger.info(f"Socket bound to port {PORT}")
         
         server_socket.listen(5)
-        logger.info("Socket is listening...")
+        logger.info(f"Secure Drop Server listening on port {PORT}...")
         
         while True:
             try:
@@ -175,10 +186,9 @@ def main():
                 client_thread = threading.Thread(target=handle_client, args=(conn, addr, context))
                 client_thread.start()
             except KeyboardInterrupt:
-                logger.info("Closing socket...")
                 break
     
-    logger.info("Socket closed")
+    logger.info("Secure Drop Server stopped")
     
 if __name__ == "__main__":
     main()
