@@ -4,6 +4,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA512
 from Crypto.Hash import HMAC
@@ -81,6 +82,8 @@ def sync_contacts():
             if addr[0] == own_ip:
                 continue
             
+            logger.info("Discovered server at: " + addr[0])
+            
             server_cert = x509.load_pem_x509_certificate(response, default_backend())
             with open(sdutils.CA_CERT_PATH, "rb") as file:
                 ca_cert = x509.load_pem_x509_certificate(file.read(), default_backend())
@@ -89,6 +92,7 @@ def sync_contacts():
             ca_public_key.verify(
                 server_cert.signature,
                 server_cert.tbs_certificate_bytes,
+                padding.PKCS1v15(),
                 server_cert.signature_hash_algorithm
             )
             servers.append(addr)
@@ -153,7 +157,13 @@ def sync_contacts():
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())
                 if data is None:
-                    raise ValueError("Decryption and verification failed.")
+                    logger.warning("Failed to decrypt and verify contacts data")
+                    continue
+                
+                # Check if data is a dictionary and convert it to bytes if necessary
+                if isinstance(data, dict):
+                    data = json.dumps(data).encode('utf-8')
+                
                 data = json.loads(data.decode("utf-8"))
                 contacts = data["contacts"]
                 for contact in contacts:
@@ -165,7 +175,7 @@ def sync_contacts():
                 
             client_socket.close()
         except Exception as e:
-            logger.warning(f"Failed to sync contacts: {e}")
+            logger.error(f"Failed to sync contacts: {e}")
             client_socket.close()
             continue
     

@@ -48,7 +48,7 @@ def handle_client(conn, addr, context):
         
         encrypted_signed_challenge = conn.recv(1024)
         signed_challenge = sdutils.pgp_decrypt_and_verify_data(encrypted_signed_challenge, sender_public_key)
-        
+
         try:
             h = HMAC.new(shared_secret_key, challenge, SHA512)
             h.verify(signed_challenge)
