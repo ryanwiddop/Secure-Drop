@@ -44,22 +44,23 @@ def secure_drop_shell():
 
 def main():
     sdutils = SecureDropUtils()
+    
     logging.basicConfig(
-    filename=sdutils.LOG_FILE_PATH,
-    level=logging.INFO,
-    format="%(asctime)s CLIENT | %(levelname)s: %(message)s"
+        filename=sdutils.LOG_FILE_PATH,
+        level=logging.INFO,
+        format="%(asctime)s CLIENT | %(levelname)s: %(message)s"
     )
     logger = logging.getLogger()    
     try:
         startup()
     except KeyboardInterrupt:
-        print("\nExiting Secure Drop.")
-        logger.info("Exiting Secure Drop.")
+        print("\nExiting SecureDrop.")
+        logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
         exit()
     except SystemExit:
-        print("\nExiting Secure Drop.")
-        logger.info("Exiting Secure Drop.")
+        print("\nExiting SecureDrop.")
+        logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
         exit()
     
@@ -73,17 +74,17 @@ def main():
         exit()
     
     try:
-        logger.info("Secure Drop started.")
+        logger.info("SecureDrop started.")
         secure_drop_shell()
     except KeyboardInterrupt:
-        print("\nExiting Secure Drop.")
-        logger.info("Exiting Secure Drop.")
+        print("\nExiting SecureDrop.")
+        logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
         process.terminate()
         exit()
     except SystemExit:
         process.terminate()
-        logger.info("Exiting Secure Drop.")
+        logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
         exit()
     except Exception as e:
@@ -91,7 +92,7 @@ def main():
         print("An error occurred.")
         print("Exception:", e)
         logger.error(f"An error occurred: {e}")
-        logger.info("Exiting Secure Drop.")
+        logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
         exit()
         

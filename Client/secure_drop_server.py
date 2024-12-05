@@ -106,7 +106,7 @@ def discovery_server():
             try:
                 data, addr = client_socket.recvfrom(1024)
                 if addr[0] == own_ip:
-                    continue
+                    pass
                 logger.info(f"Dicovery request received from {addr}")
                 if data == b"DISCOVER_SECURE_DROP":
                     cert = x509.load_pem_x509_certificate(open(sdutils.CLIENT_CERT_PATH, "rb").read(), default_backend())

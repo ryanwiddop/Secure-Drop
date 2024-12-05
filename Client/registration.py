@@ -168,12 +168,8 @@ def startup() -> None:
                 password = None
                 repassword = None
                 
-                print("Exiting SecureDrop.")
-                logging.info("Exiting SecureDrop.")
                 sys.exit()
             else:
-                print("Exiting SecureDrop.")
-                logging.info("Exiting SecureDrop.")
                 sys.exit()
         else:
             email = input("Enter Email Address: ")

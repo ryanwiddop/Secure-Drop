@@ -299,3 +299,6 @@
 2024-12-05 04:46:53,660 CLIENT | INFO: Secure Drop started.
 2024-12-05 04:46:53,815 SERVER | INFO: Secure Drop Server listening on port 23325...
 2024-12-05 04:46:53,818 SERVER | INFO: Discovery server listening on port 23326
+2024-12-05 04:47:56,495 SERVER | INFO: Secure Drop Server stopped
+2024-12-05 04:47:56,495 CLIENT | INFO: Exiting Secure Drop.
+2024-12-05 04:47:56,495 CLIENT | INFO: --------------------------------------------------

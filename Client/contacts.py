@@ -73,9 +73,13 @@ def sync_contacts():
     
     start_time = time.time()
     
+    own_ip = socket.gethostbyname(socket.gethostname())
+    
     while True:
         try:
             response, addr = client_discovery_socket.recvfrom(1024)
+            if addr[0] == own_ip:
+                continue
             
             server_cert = x509.load_pem_x509_certificate(response, default_backend())
             with open(sdutils.CA_CERT_PATH, "rb") as file:

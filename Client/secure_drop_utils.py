@@ -65,6 +65,8 @@ class SecureDropUtils:
             self.CONTACTS_JSON_PATH = str(Path(__file__).parent / ".db/contacts.json")
         if not hasattr(self, "LOG_FILE_PATH"):
             self.LOG_FILE_PATH = str(Path(__file__).parent / ".db/secure_drop.log")
+            log_dir = Path(self.LOG_FILE_PATH).parent
+            log_dir.mkdir(parents=True, exist_ok=True)
         if not hasattr(self, "_private_key"):
             self._private_key = None
         if not hasattr(self, "_public_key"):
