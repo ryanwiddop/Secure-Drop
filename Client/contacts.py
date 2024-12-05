@@ -243,6 +243,11 @@ def list_contacts() -> None:
         for contact in contacts:
             if contact["online"]:
                 print(f"  * {contact['name']} <{contact['email']}>")
+                
+        print("\n  The following contacts are offline:")
+        for contact in contacts:
+            if not contact["online"]:
+                print(f"  - {contact['name']} <{contact['email']}>")
     except Exception as e:
         print("An error occurred while listing the contacts.")
         print("Exception:", e)
