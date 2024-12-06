@@ -1,4 +1,4 @@
-import socket, ssl, threading, logging, tempfile, os, sys
+import socket, ssl, threading, logging, tempfile, os, sys, signal
 from secure_drop_utils import SecureDropUtils
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -7,6 +7,11 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from Crypto.Hash import SHA512
 from Crypto.Hash import HMAC
+
+shutdown_event = threading.Event()
+
+def signal_handler(signum, frame):
+    shutdown_event.set()
 
 def handle_client(conn, addr):
     """
@@ -55,9 +60,9 @@ def handle_client(conn, addr):
         encrypted_challenge = sdutils.pgp_encrypt_and_sign_data(challenge.hex(), sender_public_key)
         conn.sendall(encrypted_challenge)
         
-        encrypted_signed_challenge_hex = conn.recv(1024)
-        encrypted_signed_challenge = bytes.fromhex(encrypted_signed_challenge_hex)
-        signed_challenge = sdutils.pgp_decrypt_and_verify_data(encrypted_signed_challenge, sender_public_key)
+        encrypted_signed_challenge = conn.recv(1024)
+        signed_challenge_hex = sdutils.pgp_decrypt_and_verify_data(encrypted_signed_challenge, sender_public_key)
+        signed_challenge = bytes.fromhex(signed_challenge_hex)
 
         try:
             h = HMAC.new(shared_secret_key, challenge, SHA512)
@@ -70,17 +75,18 @@ def handle_client(conn, addr):
         # Receive command
         encrypted_command = conn.recv(1024)
         command = sdutils.pgp_decrypt_and_verify_data(encrypted_command, sender_public_key)
+        logger.info(f"Received command {command} from {addr}")
         
         if command is None:
             logger.warning(f"Failed to decrypt and verify data from {addr}")
             conn.close()
             return
-        elif command == b"SYNC_CONTACTS":
-            encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username.encode("utf-8"), sender_public_key)
-            encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email.encode("utf-8"), sender_public_key)
+        elif command == "SYNC_CONTACTS":
+            encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
+            encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
             conn.sendall(encrypted_username)
             conn.sendall(encrypted_email)
-        elif command == b"SEND_FILE":
+        elif command == "SEND_FILE":
             pass
         
     except ssl.SSLError as e:
@@ -181,16 +187,22 @@ def main():
         server_socket.listen(5)
         logger.info(f"Secure Drop Server listening on port {PORT}...")
         
-        while True:
+        while not shutdown_event.is_set():
             try:
+                server_socket.settimeout(1.0)
                 conn, addr = server_socket.accept()
                 logger.info(f"Accepted connection from {addr}")
                 client_thread = threading.Thread(target=handle_client, args=(conn, addr))
                 client_thread.start()
+            except socket.timeout:
+                continue
             except KeyboardInterrupt:
                 break
     
     logger.info("Secure Drop Server stopped")
-    
+    discovery_server_thread.join()
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     main()

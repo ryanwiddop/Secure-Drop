@@ -157,7 +157,7 @@ def sync_contacts():
             encrypted_challenge_hash = sdutils.pgp_encrypt_and_sign_data(challenge_hash.hex(), sender_public_key)
             client_socket.send(encrypted_challenge_hash)
             
-            command = sdutils.pgp_encrypt_and_sign_data(b"SYNC_CONTACTS", sender_public_key)
+            command = sdutils.pgp_encrypt_and_sign_data("SYNC_CONTACTS", sender_public_key)
             client_socket.send(command)
             
             encrypted_server_name = client_socket.recv(1024)
@@ -166,8 +166,8 @@ def sync_contacts():
                 logger.warning(f"Failed to receive server name and email from {server}")
                 continue
             
-            server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key).decode("utf-8")
-            server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key).decode("utf-8")
+            server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key)
+            server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())
