@@ -154,7 +154,7 @@ def sync_contacts():
             shared_key_bytes = bytes.fromhex(shared_key)
             challenge_bytes = bytes.fromhex(challenge)
             challenge_hash = HMAC.new(shared_key_bytes, challenge_bytes, digestmod=SHA512).digest()
-            encrypted_challenge_hash = sdutils.pgp_encrypt_and_sign_data(challenge_hash, sender_public_key)
+            encrypted_challenge_hash = sdutils.pgp_encrypt_and_sign_data(challenge_hash.hex(), sender_public_key)
             client_socket.send(encrypted_challenge_hash)
             
             command = sdutils.pgp_encrypt_and_sign_data(b"SYNC_CONTACTS", sender_public_key)

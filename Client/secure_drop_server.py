@@ -55,7 +55,8 @@ def handle_client(conn, addr):
         encrypted_challenge = sdutils.pgp_encrypt_and_sign_data(challenge.hex(), sender_public_key)
         conn.sendall(encrypted_challenge)
         
-        encrypted_signed_challenge = conn.recv(1024)
+        encrypted_signed_challenge_hex = conn.recv(1024)
+        encrypted_signed_challenge = bytes.fromhex(encrypted_signed_challenge_hex)
         signed_challenge = sdutils.pgp_decrypt_and_verify_data(encrypted_signed_challenge, sender_public_key)
 
         try:
