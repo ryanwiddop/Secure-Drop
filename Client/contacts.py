@@ -151,7 +151,9 @@ def sync_contacts():
                 logger.warning(f"Failed to decrypt and verify challenge from {server}")
                 continue
             
-            challenge_hash = HMAC.new(shared_key, challenge, digestmod=SHA512).digest()
+            shared_key_bytes = bytes.fromhex(shared_key)
+            challenge_bytes = bytes.fromhex(challenge)
+            challenge_hash = HMAC.new(shared_key_bytes, challenge_bytes, digestmod=SHA512).digest()
             encrypted_challenge_hash = sdutils.pgp_encrypt_and_sign_data(challenge_hash, sender_public_key)
             client_socket.send(encrypted_challenge_hash)
             
