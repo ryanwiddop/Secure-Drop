@@ -176,6 +176,9 @@ def sync_contacts():
             command = sdutils.pgp_encrypt_and_sign_data("SYNC_CONTACTS", sender_public_key)
             client_socket.send(command)
             
+            client_socket.send(sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key))
+            client_socket.send(sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key))
+            
             encrypted_server_name = client_socket.recv(1024)
             encrypted_server_email = client_socket.recv(1024)
             if encrypted_server_name is None or encrypted_server_email is None:
@@ -184,6 +187,10 @@ def sync_contacts():
             
             server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key)
             server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
+            
+            if server_name == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
+                logger.warning(f"Server {server} has a contact mismatch")
+                continue
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())

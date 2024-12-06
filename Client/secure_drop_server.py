@@ -1,5 +1,6 @@
-import socket, ssl, threading, logging, tempfile, os, sys, signal
+import socket, ssl, threading, logging, tempfile, os, sys, signal, json
 from secure_drop_utils import SecureDropUtils
+from contacts import _verify_contact_file
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from cryptography import x509
@@ -24,6 +25,7 @@ def handle_client(conn, addr):
         context (ssl.SSLContext): The SSL context for wrapping the socket.
     """
     try:
+        _verify_contact_file()
         sdutils = SecureDropUtils()
         
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -82,10 +84,44 @@ def handle_client(conn, addr):
             conn.close()
             return
         elif command == "SYNC_CONTACTS":
-            encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
-            encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
-            conn.sendall(encrypted_username)
-            conn.sendall(encrypted_email)
+            encrypted_sender_username = conn.recv(1024)
+            encrypted_sender_email = conn.recv(1024)
+            sender_username = sdutils.pgp_decrypt_and_verify_data(encrypted_sender_username, sender_public_key)
+            sender_email = sdutils.pgp_decrypt_and_verify_data(encrypted_sender_email, sender_public_key)
+            
+            with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+                data = sdutils.decrypt_and_verify(file.read())
+                if data is None:
+                    logger.warning("Failed to decrypt and verify contacts data")
+                
+                if isinstance(data, dict):
+                    data = json.dumps(data).encode('utf-8')
+                
+                data = json.loads(data.decode("utf-8"))
+                contacts = data["contacts"]
+                
+            if not contacts:
+                encrypted_username = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                encrypted_email = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                conn.sendall(encrypted_username)
+                conn.sendall(encrypted_email)
+            else:
+                contact_found = False
+                for contact in contacts:
+                    if contact["name"] == sender_username and contact["email"] == sender_email:
+                        encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
+                        encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
+                        conn.sendall(encrypted_username)
+                        conn.sendall(encrypted_email)
+                        contact_found = True
+                        break
+                    
+                if not contact_found:
+                    encrypted_username = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                    encrypted_email = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                    conn.sendall(encrypted_username)
+                    conn.sendall(encrypted_email)
+
         elif command == "SEND_FILE":
             pass
         
@@ -174,6 +210,8 @@ def main():
     sdutils._private_key = private_key
     sdutils._username = username
     sdutils._email = email
+    with open(sdutils._PUBLIC_KEY_PATH, "rb") as file:
+        sdutils._public_key = RSA.import_key(file.read())
     
     HOST = ""
     PORT = 23325
