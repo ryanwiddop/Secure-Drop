@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from Crypto.Hash import SHA512
 from Crypto.Hash import HMAC
 
-def handle_client(conn, addr, context):
+def handle_client(conn, addr):
     """
     Handles the client connection, performs SSL handshake, exchanges encrypted data,
     verifies the challenge response, and processes commands from the client.
@@ -47,12 +47,12 @@ def handle_client(conn, addr, context):
 
         # Generate shared secret key
         shared_secret_key = get_random_bytes(32)
-        encrypted_shared_secret_key = sdutils.pgp_encrypt_and_sign_data(shared_secret_key, sender_public_key)
+        encrypted_shared_secret_key = sdutils.pgp_encrypt_and_sign_data(shared_secret_key.decode("utf-8"), sender_public_key)
         conn.sendall(encrypted_shared_secret_key)
 
         # Verify challenge response
         challenge = get_random_bytes(32)
-        encrypted_challenge = sdutils.pgp_encrypt_and_sign_data(challenge, sender_public_key)
+        encrypted_challenge = sdutils.pgp_encrypt_and_sign_data(challenge.decode("utf-8"), sender_public_key)
         conn.sendall(encrypted_challenge)
         
         encrypted_signed_challenge = conn.recv(1024)

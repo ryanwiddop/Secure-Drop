@@ -146,7 +146,7 @@ def sync_contacts():
             if encrypted_challenge is None:
                 logger.warning(f"Failed to receive challenge from {server}")
                 continue
-            challenge = sdutils.decrypt_and_verify(encrypted_challenge, sender_public_key)
+            challenge = sdutils.pgp_decrypt_and_verify_data(encrypted_challenge, sender_public_key)
             if challenge is None:
                 logger.warning(f"Failed to decrypt and verify challenge from {server}")
                 continue
