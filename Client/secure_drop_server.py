@@ -19,9 +19,18 @@ def handle_client(conn, addr, context):
         context (ssl.SSLContext): The SSL context for wrapping the socket.
     """
     try:
-        conn = context.wrap_socket(conn, server_side=True)
         sdutils = SecureDropUtils()
         
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.verify_mode = ssl.CERT_REQUIRED
+        with tempfile.NamedTemporaryFile() as private_key_file:
+            private_key_file.write(sdutils._private_key.export_key())
+            private_key_file.flush()
+            private_key_file.seek(0)
+            context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=private_key_file.name)
+        context.load_verify_locations(cafile=sdutils.CA_CERT_PATH)
+        conn = context.wrap_socket(conn, server_side=True)
+
         cryptography_sender_cert = conn.getpeercert(binary_form=True)
         cryptography_sender_cert = x509.load_der_x509_certificate(cryptography_sender_cert, default_backend())
         cryptography_sender_public_key = cryptography_sender_cert.public_key()
@@ -162,14 +171,6 @@ def main():
     HOST = ""
     PORT = 23325
     
-    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    with tempfile.NamedTemporaryFile() as private_key_file:
-        private_key_file.write(private_key.export_key())
-        private_key_file.flush()
-        private_key_file.seek(0)
-        context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=private_key_file.name)
-    context.load_verify_locations(cafile=sdutils.CA_CERT_PATH)
-    
     discovery_server_thread = threading.Thread(target=discovery_server)
     discovery_server_thread.start()
     
@@ -183,7 +184,7 @@ def main():
             try:
                 conn, addr = server_socket.accept()
                 logger.info(f"Accepted connection from {addr}")
-                client_thread = threading.Thread(target=handle_client, args=(conn, addr, context))
+                client_thread = threading.Thread(target=handle_client, args=(conn, addr))
                 client_thread.start()
             except KeyboardInterrupt:
                 break

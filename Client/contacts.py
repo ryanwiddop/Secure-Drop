@@ -113,17 +113,20 @@ def sync_contacts():
             client_socket.connect((server[0], SERVER_PORT))
             context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
             context.verify_mode = ssl.CERT_REQUIRED
-            context.load_verify_locations(sdutils.CA_CERT_PATH)
             with tempfile.NamedTemporaryFile() as private_key_file:
                 private_key_file.write(sdutils._private_key.export_key())
                 private_key_file.flush()
                 private_key_file.seek(0)
                 context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=private_key_file.name)
+            context.load_verify_locations(sdutils.CA_CERT_PATH)
             client_socket = context.wrap_socket(client_socket, server_hostname="SecureDrop")
                     
             cryptography_server_cert_der = client_socket.getpeercert(binary_form=True)
             cryptography_server_cert = x509.load_der_x509_certificate(cryptography_server_cert_der, default_backend())
             cryptography_server_public_key = cryptography_server_cert.public_key()
+            if cryptography_server_public_key is None:
+                logger.warning(f"Failed to get public key from {server}")
+                continue
             sender_public_key_bytes = cryptography_server_public_key.public_bytes(
                 encoding=serialization.Encoding.PEM, 
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
@@ -131,12 +134,18 @@ def sync_contacts():
             sender_public_key = RSA.import_key(sender_public_key_bytes)
             
             encrypted_shared_secret_key = client_socket.recv(1024)
+            if encrypted_shared_secret_key is None:
+                logger.warning(f"Failed to receive shared key from {server}")
+                continue
             shared_key = sdutils.pgp_decrypt_and_verify_data(encrypted_shared_secret_key, sender_public_key)
             if shared_key is None:
                 logger.warning(f"Failed to decrypt and verify shared key from {server}")
                 continue
             
             encrypted_challenge = client_socket.recv(1024)
+            if encrypted_challenge is None:
+                logger.warning(f"Failed to receive challenge from {server}")
+                continue
             challenge = sdutils.decrypt_and_verify(encrypted_challenge, sender_public_key)
             if challenge is None:
                 logger.warning(f"Failed to decrypt and verify challenge from {server}")
@@ -151,6 +160,10 @@ def sync_contacts():
             
             encrypted_server_name = client_socket.recv(1024)
             encrypted_server_email = client_socket.recv(1024)
+            if encrypted_server_name is None or encrypted_server_email is None:
+                logger.warning(f"Failed to receive server name and email from {server}")
+                continue
+            
             server_name = sdutils.pgp_decrypt_and_verify_data(encrypted_server_name, sender_public_key).decode("utf-8")
             server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key).decode("utf-8")
             
