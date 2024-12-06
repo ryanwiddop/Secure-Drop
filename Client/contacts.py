@@ -63,6 +63,22 @@ def sync_contacts():
         Exception: For any other errors that occur during the process.
     """
     sdutils = SecureDropUtils()
+    with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+        data = sdutils.decrypt_and_verify(file.read())
+        if data is None:
+            logger.warning("Failed to decrypt and verify contacts data")
+        
+        if isinstance(data, dict):
+            data = json.dumps(data).encode('utf-8')
+        
+        data = json.loads(data.decode("utf-8"))
+        contacts = data["contacts"]
+    for contact in contacts:
+        contact["online"] = False
+    
+    with open(sdutils.CONTACTS_JSON_PATH, "wb") as file:
+        file.write(sdutils.encrypt_and_sign(json.dumps({"contacts": contacts}).encode("utf-8")))
+    
     SERVER_PORT = 23325
     DISCOVERY_PORT = 23326
     servers = []

@@ -22,25 +22,36 @@ def start_secure_drop_server() -> subprocess.Popen:
     return process
 
 def secure_drop_shell():
-    print("Welcome to Secure Drop.\nType \"help\" For Commands.\n")
-    
-    while True:
-        command = input("secure_drop> ")
-        if command == "help":
-            print("  \"add\" -> Add a new contact")
-            print("  \"list\" -> List all online contacts")
-            print("  \"send\" -> Transfer file to contact")
-            print("  \"exit\" -> Exit SecureDrop")
-        elif command == "add":
-            add_contact()
-        elif command == "list":
-            list_contacts()
-        elif command == "send":
-            # UDP or !TLS!
-            pass
-        elif command == "exit":
-            sys.exit()
-
+    process = None
+    try:
+        process = start_secure_drop_server()
+        print("Welcome to Secure Drop.\nType \"help\" For Commands.\n")
+        
+        while True:
+            command = input("secure_drop> ")
+            if command == "help":
+                print("  \"add\" -> Add a new contact")
+                print("  \"list\" -> List all online contacts")
+                print("  \"send\" -> Transfer file to contact")
+                print("  \"exit\" -> Exit SecureDrop")
+            elif command == "add":
+                add_contact()
+            elif command == "list":
+                list_contacts()
+            elif command == "send":
+                # UDP or !TLS!
+                pass
+            elif command == "exit":
+                break
+    except SystemExit:
+        pass
+    except Exception as e:
+        print("An error occurred.")
+        print("Exception:", e)
+    finally:
+        if process:
+            process.kill()
+            process.wait()
 
 def main():
     sdutils = SecureDropUtils()
@@ -65,30 +76,18 @@ def main():
         exit()
     
     try:
-        process = start_secure_drop_server()
-    except SystemExit:
-        exit()
-    except Exception as e:
-        print("An error occurred.")
-        print("Exception:", e)
-        exit()
-    
-    try:
         logger.info("SecureDrop started.")
         secure_drop_shell()
     except KeyboardInterrupt:
         print("\nExiting SecureDrop.")
         logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
-        process.terminate()
         exit()
     except SystemExit:
-        process.terminate()
         logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
         exit()
     except Exception as e:
-        process.terminate()
         print("An error occurred.")
         print("Exception:", e)
         logger.error(f"An error occurred: {e}")
