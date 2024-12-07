@@ -6,7 +6,7 @@ from pathlib import Path
 
 logger = logging.getLogger()
 
-def __get_registered_user() -> bool:
+def _get_registered_user() -> bool:
     """
     Checks if a registered user exists by reading and validating the user data from a file.
     The function attempts to read the user data from a file specified by USER_JSON_PATH.
@@ -43,7 +43,7 @@ def __get_registered_user() -> bool:
         print("Exception: ", sys.exc_info()[0])
         return None
 
-def __register_new_user(username: str, email: str, password: str) -> None:
+def _register_new_user(username: str, email: str, password: str) -> None:
     """
     Registers a new user by hashing the password, encrypting the user data, 
     and saving it to a file.
@@ -65,6 +65,12 @@ def __register_new_user(username: str, email: str, password: str) -> None:
             "email": email,
             "password": sdutils.hash_data(password)
         }
+        
+        with open(sdutils._PRIVATE_KEY_PATH, "rb") as file:
+            sdutils._private_key = RSA.import_key(file.read())
+        with open(sdutils._PUBLIC_KEY_PATH, "rb") as file:
+            sdutils._public_key = RSA.import_key(file.read())
+        
         new_user_encrypted = sdutils.encrypt_and_sign(json.dumps(new_user).encode("utf-8"))
         with open(sdutils.USER_JSON_PATH, "wb") as file:
             file.write(new_user_encrypted)
@@ -73,7 +79,7 @@ def __register_new_user(username: str, email: str, password: str) -> None:
         print("Exception: ", e)
         sys.exit()
             
-def __verify_user(email: str, password: str) -> bool: 
+def _verify_user(email: str, password: str) -> bool: 
     """
     Verifies the user"s email and password.
     This function attempts to verify a user"s email and password by decrypting
@@ -145,7 +151,7 @@ def startup() -> None:
     try:
         sdutils = SecureDropUtils()
 
-        if not __get_registered_user():
+        if not _get_registered_user():
             sdutils.verify_key_pair()
             print("No users are registered with this client.")
             if(input("Do you want to register a new user (y/n)? ") == "y"):
@@ -159,7 +165,7 @@ def startup() -> None:
                     repassword = getpass("Re-enter Password: ")
                 else:
                     print("\nPasswords Match.")
-                __register_new_user(name, email, password)
+                _register_new_user(name, email, password)
                 
                 logging.info("User Registered")
                 print("User Registered\n")
@@ -175,7 +181,7 @@ def startup() -> None:
             email = input("Enter Email Address: ")
             password = getpass("Enter Password: ")
                                 
-            while (not __verify_user(email, password)):
+            while (not _verify_user(email, password)):
                 print("Email and Password Combination Invalid.\n")
                 email = input("Enter Email Address: ")
                 password = getpass("Enter Password: ")

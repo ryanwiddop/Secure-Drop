@@ -1,4 +1,4 @@
-import socket, ssl, threading, logging, tempfile, os, sys, signal, json
+import socket, ssl, threading, logging, tempfile, sys, signal, json
 from secure_drop_utils import SecureDropUtils
 from contacts import _verify_contact_file
 from Crypto.PublicKey import RSA
@@ -187,9 +187,10 @@ def handle_client(conn, addr):
                 for contact in contacts:
                     if contact["name"] == sender_username and contact["email"] == sender_email:
                         try:
-                            
-                            with open(sdutils.INBOX_PATH + file_name, "wb") as file:
-                                file.write(file)
+                            accept = input(f"Contact \'{contact['name']} <{contact['email']}>\' is sending a file. Accept? (y/n)? ")
+                            if accept.lower() == "y":
+                                with open(sdutils.INBOX_PATH + file_name, "wb") as file:
+                                    file.write(file)
                             break
                         except Exception as e:
                             logger.error(f"Failed to write file to inbox: {e}")

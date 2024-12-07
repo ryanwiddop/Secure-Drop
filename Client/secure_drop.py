@@ -1,4 +1,4 @@
-import sys, subprocess, logging, socket, os
+import sys, subprocess, logging, socket
 from registration import startup
 from contacts import add_contact, list_contacts, send_file
 from secure_drop_utils import SecureDropUtils

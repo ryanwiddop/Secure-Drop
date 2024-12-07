@@ -1,16 +1,11 @@
-import sys, base64, struct, os, socket, ssl, logging
+import sys, base64, struct, os, logging
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA512
 from Crypto.Signature import pkcs1_15
 from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Util.Padding import pad, unpad
 from pathlib import Path
-# from cryptography import x509
-# from cryptography.hazmat.primitives import serialization
-# from cryptography.hazmat.backends import default_backend
-# from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger()
 
