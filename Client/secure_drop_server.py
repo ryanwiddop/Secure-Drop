@@ -80,7 +80,7 @@ def handle_client(conn, addr):
         logger.info(f"Received command {command} from {addr}")
         
         if command is None:
-            logger.warning(f"Failed to decrypt and verify data from {addr}")
+            logger.warning(f"Failed to decrypt and verify data from {addr} or invalid command received")
             conn.close()
             return
         elif command == "SYNC_CONTACTS":
@@ -123,7 +123,84 @@ def handle_client(conn, addr):
                     conn.sendall(encrypted_email)
 
         elif command == "SEND_FILE":
-            pass
+            encrypted_sender_username = conn.recv(1024)
+            encrypted_sender_email = conn.recv(1024)
+            sender_username = sdutils.pgp_decrypt_and_verify_data(encrypted_sender_username, sender_public_key)
+            sender_email = sdutils.pgp_decrypt_and_verify_data(encrypted_sender_email, sender_public_key)
+            
+            with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+                data = sdutils.decrypt_and_verify(file.read())
+                if data is None:
+                    logger.warning("Failed to decrypt and verify contacts data")
+                
+                if isinstance(data, dict):
+                    data = json.dumps(data).encode('utf-8')
+                
+                data = json.loads(data.decode("utf-8"))
+                contacts = data["contacts"]
+                
+            if not contacts:
+                encrypted_username = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                encrypted_email = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                conn.sendall(encrypted_username)
+                conn.sendall(encrypted_email)
+            else:
+                contact_found = False
+                for contact in contacts:
+                    if contact["name"] == sender_username and contact["email"] == sender_email:
+                        encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
+                        encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
+                        conn.sendall(encrypted_username)
+                        conn.sendall(encrypted_email)
+                        contact_found = True
+                        break
+                    
+                if not contact_found:
+                    encrypted_username = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                    encrypted_email = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
+                    conn.sendall(encrypted_username)
+                    conn.sendall(encrypted_email)
+            
+            encrypted_file_name = conn.recv(1024)
+            file_name = sdutils.pgp_decrypt_and_verify_data(encrypted_file_name, sender_public_key)
+            
+            encrypted_file = conn.recv(4096)
+            file = sdutils.pgp_decrypt_and_verify_data(encrypted_file, sender_public_key)
+            
+            if file is None:
+                logger.warning(f"Failed to decrypt and verify file from {addr}")
+                conn.close()
+                return
+            
+            with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+                data = sdutils.decrypt_and_verify(file.read())
+                if data is None:
+                    logger.warning("Failed to decrypt and verify contacts data")
+                
+                if isinstance(data, dict):
+                    data = json.dumps(data).encode('utf-8')
+                
+                data = json.loads(data.decode("utf-8"))
+                contacts = data["contacts"]
+                
+            if contacts:
+                for contact in contacts:
+                    if contact["name"] == sender_username and contact["email"] == sender_email:
+                        try:
+                            
+                            with open(sdutils.INBOX_PATH + file_name, "wb") as file:
+                                file.write(file)
+                            break
+                        except Exception as e:
+                            logger.error(f"Failed to write file to inbox: {e}")
+                            break
+                else:
+                    logger.warning(f"Contact not found in contacts list")
+            else:
+                logger.warning(f"Contacts list is empty")
+                
+        else:
+            logger.warning(f"Invalid command received from {addr}")
         
     except ssl.SSLError as e:
         logger.error(f"SSL error occurred while handling client {addr}")
@@ -187,7 +264,30 @@ def main():
 
     Uses SSL for secure communication and logs important events.
     """
+    
+    if len(sys.argv) != 2:
+        print("Usage: secure_drop_server.py <socket_fd>")
+        sys.exit()
+    
+    sock_fd = int(sys.argv[1])
+    sock = socket.socket(fileno=sock_fd)
+    
+    private_key = sock.recv(4096).decode('utf-8').strip()
+    encrypted_username = sock.recv(4096).decode('utf-8').strip()
+    encrypted_email = sock.recv(4096).decode('utf-8').strip()
+    
+    sock.close()
+    
     sdutils = SecureDropUtils()
+    
+    sdutils._private_key = private_key
+    with open(sdutils._PUBLIC_KEY_PATH, "rb") as file:
+        sdutils._public_key = RSA.import_key(file.read())
+    username = sdutils.decrypt_and_verify(encrypted_username)
+    email = sdutils.decrypt_and_verify(encrypted_email)
+    sdutils._username = username
+    sdutils._email = email
+    
     logging.basicConfig(
         filename=sdutils.LOG_FILE_PATH,
         level=logging.INFO,
@@ -195,23 +295,6 @@ def main():
     )
     global logger 
     logger = logging.getLogger()
-    
-    parent_input = sys.stdin.read().split("-----END RSA PRIVATE KEY-----")
-    private_key_str = parent_input[0] + "-----END RSA PRIVATE KEY-----"
-    username_and_email = parent_input[1].split("\n")
-    username = username_and_email[0]
-    email = username_and_email[1]
-        
-    if not private_key_str:
-        logger.error("Failed to read PRIVATE_KEY from stdin")
-        return
-    private_key = RSA.import_key(private_key_str)
-    
-    sdutils._private_key = private_key
-    sdutils._username = username
-    sdutils._email = email
-    with open(sdutils._PUBLIC_KEY_PATH, "rb") as file:
-        sdutils._public_key = RSA.import_key(file.read())
     
     HOST = ""
     PORT = 23325

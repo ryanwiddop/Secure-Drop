@@ -67,6 +67,10 @@ class SecureDropUtils:
             self.LOG_FILE_PATH = str(Path(__file__).parent / ".db/secure_drop.log")
             log_dir = Path(self.LOG_FILE_PATH).parent
             log_dir.mkdir(parents=True, exist_ok=True)
+        if not hasattr(self, "INBOX_PATH"):
+            self.INBOX_PATH = str(Path(__file__).parent / "inbox/")
+            inbox_dir = Path(self.INBOX_PATH)
+            inbox_dir.mkdir(parents=True, exist_ok=True)
         if not hasattr(self, "_private_key"):
             self._private_key = None
         if not hasattr(self, "_public_key"):

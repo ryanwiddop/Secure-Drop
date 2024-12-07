@@ -48,38 +48,8 @@ def _verify_contact_file() -> None:
         print("Exception:", e)
         sys.exit()
 
-def sync_contacts():
-    """
-    Synchronizes the contacts with the server.
-
-    This function discovers servers, verifies their certificates, and synchronizes the contacts list.
-    It updates the online status of contacts based on the server responses.
-
-    Parameters:
-        contacts (list): The list of contacts to be synchronized.
-
-    Raises:
-        ValueError: If decryption and verification of the contacts file fails.
-        Exception: For any other errors that occur during the process.
-    """
+def _discover_servers() -> list:
     sdutils = SecureDropUtils()
-    with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
-        data = sdutils.decrypt_and_verify(file.read())
-        if data is None:
-            logger.warning("Failed to decrypt and verify contacts data")
-        
-        if isinstance(data, dict):
-            data = json.dumps(data).encode('utf-8')
-        
-        data = json.loads(data.decode("utf-8"))
-        contacts = data["contacts"]
-    for contact in contacts:
-        contact["online"] = False
-    
-    with open(sdutils.CONTACTS_JSON_PATH, "wb") as file:
-        file.write(sdutils.encrypt_and_sign(json.dumps({"contacts": contacts}).encode("utf-8")))
-    
-    SERVER_PORT = 23325
     DISCOVERY_PORT = 23326
     servers = []
 
@@ -120,11 +90,43 @@ def sync_contacts():
         if time.time() - start_time > 2:
             break
     client_discovery_socket.close() 
-            
+
+def sync_contacts():
+    """
+    Synchronizes the contacts with the server.
+
+    This function discovers servers, verifies their certificates, and synchronizes the contacts list.
+    It updates the online status of contacts based on the server responses.
+
+    Parameters:
+        contacts (list): The list of contacts to be synchronized.
+
+    Raises:
+        ValueError: If decryption and verification of the contacts file fails.
+        Exception: For any other errors that occur during the process.
+    """
+    sdutils = SecureDropUtils()
+    with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+        data = sdutils.decrypt_and_verify(file.read())
+        if data is None:
+            logger.warning("Failed to decrypt and verify contacts data")
+        
+        if isinstance(data, dict):
+            data = json.dumps(data).encode('utf-8')
+        
+        data = json.loads(data.decode("utf-8"))
+        contacts = data["contacts"]
+    for contact in contacts:
+        contact["online"] = False
+    
+    with open(sdutils.CONTACTS_JSON_PATH, "wb") as file:
+        file.write(sdutils.encrypt_and_sign(json.dumps({"contacts": contacts}).encode("utf-8")))
+    
+    servers = _discover_servers()        
 
     for server in servers:
+        SERVER_PORT = 23325
         try:
-            print()
             client_socket = socket.socket()
             client_socket.connect((server[0], SERVER_PORT))
             context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
@@ -299,3 +301,99 @@ def list_contacts() -> None:
         print("An error occurred while listing the contacts.")
         print("Exception:", e)
         sys.exit()
+
+def send_file(email: str, path: str) -> None:
+    sdutils = SecureDropUtils()
+
+    sync_contacts()
+    servers = _discover_servers()
+    
+    for server in servers:
+        SERVER_PORT = 23325
+        try:
+            client_socket = socket.socket()
+            client_socket.connect((server[0], SERVER_PORT))
+            context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+            context.verify_mode = ssl.CERT_REQUIRED
+            with tempfile.NamedTemporaryFile() as private_key_file:
+                private_key_file.write(sdutils._private_key.export_key())
+                private_key_file.flush()
+                private_key_file.seek(0)
+                context.load_cert_chain(certfile=sdutils.CLIENT_CERT_PATH, keyfile=private_key_file.name)
+            context.load_verify_locations(sdutils.CA_CERT_PATH)
+            client_socket = context.wrap_socket(client_socket, server_hostname="SecureDrop")
+                    
+            cryptography_server_cert_der = client_socket.getpeercert(binary_form=True)
+            cryptography_server_cert = x509.load_der_x509_certificate(cryptography_server_cert_der, default_backend())
+            cryptography_server_public_key = cryptography_server_cert.public_key()
+            if cryptography_server_public_key is None:
+                logger.warning(f"Failed to get public key from {server}")
+                continue
+            sender_public_key_bytes = cryptography_server_public_key.public_bytes(
+                encoding=serialization.Encoding.PEM, 
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+            sender_public_key = RSA.import_key(sender_public_key_bytes)
+            
+            encrypted_shared_secret_key = client_socket.recv(1024)
+            if encrypted_shared_secret_key is None:
+                logger.warning(f"Failed to receive shared key from {server}")
+                continue
+            shared_key = sdutils.pgp_decrypt_and_verify_data(encrypted_shared_secret_key, sender_public_key)
+            if shared_key is None:
+                logger.warning(f"Failed to decrypt and verify shared key from {server}")
+                continue
+            
+            encrypted_challenge = client_socket.recv(1024)
+            if encrypted_challenge is None:
+                logger.warning(f"Failed to receive challenge from {server}")
+                continue
+            challenge = sdutils.pgp_decrypt_and_verify_data(encrypted_challenge, sender_public_key)
+            if challenge is None:
+                logger.warning(f"Failed to decrypt and verify challenge from {server}")
+                continue
+            
+            shared_key_bytes = bytes.fromhex(shared_key)
+            challenge_bytes = bytes.fromhex(challenge)
+            challenge_hash = HMAC.new(shared_key_bytes, challenge_bytes, digestmod=SHA512).digest()
+            encrypted_challenge_hash = sdutils.pgp_encrypt_and_sign_data(challenge_hash.hex(), sender_public_key)
+            client_socket.send(encrypted_challenge_hash)
+            
+            command = sdutils.pgp_encrypt_and_sign_data("SEND_FILE", sender_public_key)
+            client_socket.send(command)
+            
+            encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
+            encrypted_email = sdutils.pgp_encrypt_and_sign_data(email, sender_public_key)
+            client_socket.send(encrypted_username)
+            client_socket.send(encrypted_email)
+            
+            encrypted_server_username = client_socket.recv(1024)
+            encrypted_server_email = client_socket.recv(1024)
+            server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
+            server_username = sdutils.pgp_decrypt_and_verify_data(encrypted_server_username, sender_public_key)
+            
+            if server_username == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
+                logger.warning(f"Server {server} has a contact mismatch")
+                continue
+            
+            with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+                contacts_data = sdutils.decrypt_and_verify(file.read())
+                if data is None:
+                    raise ValueError("Decryption and verification failed.")
+                contacts_data = json.loads(contacts_data.decode("utf-8"))
+                contacts = data["contacts"]
+            
+            for contact in contacts:
+                if contact["name"] == server_username and contact["email"] == server_email:
+                    with open(path, "r") as file:
+                        data = file.read()
+                    encrypted_data = sdutils.pgp_encrypt_and_sign_data(data, sender_public_key)
+                    client_socket.send(encrypted_data)
+                    break
+            
+            client_socket.close()
+                        
+        except Exception as e:
+            logger.error(f"Failed to send file: {e}")
+            client_socket.close()
+            continue
