@@ -470,7 +470,5 @@ class SecureDropUtils:
                 
             return True
         except Exception as e:
-            print("An error occurred while decrypting the private key with password.")
-            print("Exception:", e)
             return False
         

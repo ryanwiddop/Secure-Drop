@@ -1,12 +1,12 @@
-import sys, subprocess, logging, socket
+import sys, subprocess, logging, socket, os
 from registration import startup
 from contacts import add_contact, list_contacts, send_file
 from secure_drop_utils import SecureDropUtils
 from pathlib import Path
 
-def start_secure_drop_server() -> subprocess.Popen:
+def start_secure_drop_server() -> tuple:
     sdutils = SecureDropUtils()
-    private_key = sdutils._private_key.export_key().decode("utf-8")
+    private_key = sdutils._private_key.export_key()
     username = sdutils._username
     email = sdutils._email
     server_path = str(Path(__file__).parent / "secure_drop_server.py")
@@ -18,25 +18,23 @@ def start_secure_drop_server() -> subprocess.Popen:
         pass_fds=(child_sock.fileno(),),
         text=True
     )
+            
+    encrypted_username = sdutils.pgp_encrypt_and_sign_data(username, sdutils._public_key)
+    encrypted_email = sdutils.pgp_encrypt_and_sign_data(email, sdutils._public_key)
     
-    child_sock.close()
-        
-    encrypted_username = sdutils.encrypt_and_sign(username.encode("utf-8"))
-    encrypted_email = sdutils.encrypt_and_sign(email.encode("utf-8"))
+    parent_sock.sendall(private_key + b"---END---")
+    parent_sock.sendall(encrypted_username + b"---END---")
+    parent_sock.sendall(encrypted_email)
     
-    parent_sock.sendall(private_key.encode('utf-8') + b'\n')
-    parent_sock.sendall(encrypted_username + b'\n')
-    parent_sock.sendall(encrypted_email + b'\n')
-    
-    parent_sock.close()
-    return process
+    return process, parent_sock
 
 def secure_drop_shell():
     process = None
+    sock = None
     try:
         sdutils = SecureDropUtils()
         
-        process = start_secure_drop_server()
+        process, sock = start_secure_drop_server()
         print("Welcome to Secure Drop.\nType \"help\" For Commands.\n")
         
         while True:
@@ -46,19 +44,33 @@ def secure_drop_shell():
                 print("  \"list\" -> List all online contacts")
                 print("  \"send\" -> Transfer file to contact")
                 print("  \"exit\" -> Exit SecureDrop")
-            elif command == "add":
+            elif command.lower() == "add":
                 add_contact()
-            elif command == "list":
+            elif command.lower() == "list":
                 list_contacts()
             elif command.startswith("send"):
                 args = command.split(" ")
                 if not len(args) == 3:
                     print("  Invalid number of arguments.")
                     continue
+                if not os.path.exists(args[2]):
+                    print("  File does not exist.")
+                    continue
+                
                 send_file(args[1], args[2])
                 pass
             elif command == "exit":
                 break
+            elif command == "y":
+                try:
+                    sock.sendall(b"y")
+                except BrokenPipeError as e:
+                    print("Error: Broken pipe. The server may have terminated unexpectedly.")
+                    print("Exception:", e)
+                    break
+                except Exception as e:
+                    print("An error occurred.")
+                    print("Exception:", e)
     except SystemExit:
         pass
     except Exception as e:
@@ -68,6 +80,8 @@ def secure_drop_shell():
         if process:
             process.kill()
             process.wait()
+        if sock:
+            sock.close()
 
 def main():
     sdutils = SecureDropUtils()

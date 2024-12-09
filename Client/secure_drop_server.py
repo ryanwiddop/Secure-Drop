@@ -14,7 +14,7 @@ shutdown_event = threading.Event()
 def signal_handler(signum, frame):
     shutdown_event.set()
 
-def handle_client(conn, addr):
+def handle_client(conn, addr, sock):
     """
     Handles the client connection, performs SSL handshake, exchanges encrypted data,
     verifies the challenge response, and processes commands from the client.
@@ -22,11 +22,16 @@ def handle_client(conn, addr):
     Args:
         conn (socket.socket): The client connection socket.
         addr (tuple): The client address.
-        context (ssl.SSLContext): The SSL context for wrapping the socket.
+        sock (socket.socket): The Unix socket for communication with the main process.
     """
     try:
         _verify_contact_file()
         sdutils = SecureDropUtils()
+        
+        if sock is None:
+            logger.warning(f"Socket file descriptor is None")
+            conn.close()
+            return
         
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.verify_mode = ssl.CERT_REQUIRED
@@ -108,7 +113,7 @@ def handle_client(conn, addr):
             else:
                 contact_found = False
                 for contact in contacts:
-                    if contact["name"] == sender_username and contact["email"] == sender_email:
+                    if contact["name"].lower() == sender_username.lower() and contact["email"].lower() == sender_email.lower():
                         encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
                         encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
                         conn.sendall(encrypted_username)
@@ -139,7 +144,7 @@ def handle_client(conn, addr):
                 data = json.loads(data.decode("utf-8"))
                 contacts = data["contacts"]
                 
-            if not contacts:
+            if contacts == None:
                 encrypted_username = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
                 encrypted_email = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
                 conn.sendall(encrypted_username)
@@ -147,7 +152,7 @@ def handle_client(conn, addr):
             else:
                 contact_found = False
                 for contact in contacts:
-                    if contact["name"] == sender_username and contact["email"] == sender_email:
+                    if contact["name"].lower() == sender_username.lower() and contact["email"].lower() == sender_email.lower():
                         encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
                         encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
                         conn.sendall(encrypted_username)
@@ -155,7 +160,7 @@ def handle_client(conn, addr):
                         contact_found = True
                         break
                     
-                if not contact_found:
+                if contact_found == False:
                     encrypted_username = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
                     encrypted_email = sdutils.pgp_encrypt_and_sign_data("CONTACT_MISMATCH", sender_public_key)
                     conn.sendall(encrypted_username)
@@ -165,12 +170,6 @@ def handle_client(conn, addr):
             file_name = sdutils.pgp_decrypt_and_verify_data(encrypted_file_name, sender_public_key)
             
             encrypted_file = conn.recv(4096)
-            file = sdutils.pgp_decrypt_and_verify_data(encrypted_file, sender_public_key)
-            
-            if file is None:
-                logger.warning(f"Failed to decrypt and verify file from {addr}")
-                conn.close()
-                return
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())
@@ -187,16 +186,25 @@ def handle_client(conn, addr):
                 for contact in contacts:
                     if contact["name"] == sender_username and contact["email"] == sender_email:
                         try:
-                            accept = input(f"Contact \'{contact['name']} <{contact['email']}>\' is sending a file. Accept? (y/n)? ")
+                            print(f"\n  Contact \'{contact['name']} <{contact['email']}>\' is sending a file. Accept? (y/n)? ", end="")
+                            while True:
+                                accept = sock.recv(1024).decode("utf-8")
+                                if accept == None:
+                                    continue
+                                else:
+                                    break
                             if accept.lower() == "y":
-                                with open(sdutils.INBOX_PATH + file_name, "wb") as file:
-                                    file.write(file)
+                                file_contents = sdutils.pgp_decrypt_and_verify_data(encrypted_file, sender_public_key)
+                                if file_contents is None:
+                                    logger.warning(f"Failed to decrypt and verify file from {addr}")
+                                    conn.close()
+                                    return
+                                with open(sdutils.INBOX_PATH + "/" + file_name, "w") as file:
+                                    file.write(file_contents)
                             break
                         except Exception as e:
                             logger.error(f"Failed to write file to inbox: {e}")
                             break
-                else:
-                    logger.warning(f"Contact not found in contacts list")
             else:
                 logger.warning(f"Contacts list is empty")
                 
@@ -236,7 +244,7 @@ def discovery_server():
             try:
                 data, addr = client_socket.recvfrom(1024)
                 if addr[0] == own_ip:
-                    pass
+                    continue
                 logger.info(f"Dicovery request received from {addr}")
                 if data == b"DISCOVER_SECURE_DROP":
                     cert = x509.load_pem_x509_certificate(open(sdutils.CLIENT_CERT_PATH, "rb").read(), default_backend())
@@ -265,64 +273,75 @@ def main():
 
     Uses SSL for secure communication and logs important events.
     """
-    
-    if len(sys.argv) != 2:
-        print("Usage: secure_drop_server.py <socket_fd>")
-        sys.exit()
-    
-    sock_fd = int(sys.argv[1])
-    sock = socket.socket(fileno=sock_fd)
-    
-    private_key = sock.recv(4096).decode('utf-8').strip()
-    encrypted_username = sock.recv(4096).decode('utf-8').strip()
-    encrypted_email = sock.recv(4096).decode('utf-8').strip()
-    
-    sock.close()
-    
-    sdutils = SecureDropUtils()
-    
-    sdutils._private_key = private_key
-    with open(sdutils._PUBLIC_KEY_PATH, "rb") as file:
-        sdutils._public_key = RSA.import_key(file.read())
-    username = sdutils.decrypt_and_verify(encrypted_username)
-    email = sdutils.decrypt_and_verify(encrypted_email)
-    sdutils._username = username
-    sdutils._email = email
-    
-    logging.basicConfig(
-        filename=sdutils.LOG_FILE_PATH,
-        level=logging.INFO,
-        format="%(asctime)s SERVER | %(levelname)s: %(message)s"
-    )
-    global logger 
-    logger = logging.getLogger()
-    
-    HOST = ""
-    PORT = 23325
-    
-    discovery_server_thread = threading.Thread(target=discovery_server)
-    discovery_server_thread.start()
-    
-    with socket.socket() as server_socket:
-        server_socket.bind((HOST, PORT))
+    sock = None
+    try:
+        sdutils = SecureDropUtils()
+
+        logging.basicConfig(
+            filename=sdutils.LOG_FILE_PATH,
+            level=logging.INFO,
+            format="%(asctime)s SERVER | %(levelname)s: %(message)s"
+        )
         
-        server_socket.listen(5)
-        logger.info(f"Secure Drop Server listening on port {PORT}...")
+        if len(sys.argv) != 2:
+            print("Usage: secure_drop_server.py <socket_fd>")
+            sys.exit()
         
-        while not shutdown_event.is_set():
+        sock_fd = int(sys.argv[1])
+        sock = socket.socket(fileno=sock_fd)
+        
+        data = sock.recv(4096)
+        private_key = data.split(b"---END---")[0]
+        encrypted_username = data.split(b"---END---")[1]
+        encrypted_email = data.split(b"---END---")[2]
+                
+        sdutils._private_key = RSA.import_key(private_key)
+        with open(sdutils._PUBLIC_KEY_PATH, "rb") as file:
+            sdutils._public_key = RSA.import_key(file.read())
+        username = sdutils.pgp_decrypt_and_verify_data(encrypted_username, sdutils._public_key)
+        email = sdutils.pgp_decrypt_and_verify_data(encrypted_email, sdutils._public_key)
+        sdutils._username = username
+        sdutils._email = email
+        
+        global logger 
+        logger = logging.getLogger()
+        
+        HOST = ""
+        PORT = 23325
+        
+        discovery_server_thread = threading.Thread(target=discovery_server)
+        discovery_server_thread.start()
+        
+        with socket.socket() as server_socket:
+            server_socket.bind((HOST, PORT))
+            
+            server_socket.listen(5)
+            logger.info(f"Secure Drop Server listening on port {PORT}...")
+            
+            while not shutdown_event.is_set():
+                try:
+                    server_socket.settimeout(1.0)
+                    conn, addr = server_socket.accept()
+                    logger.info(f"Accepted connection from {addr}")
+                    client_thread = threading.Thread(target=handle_client, args=(conn, addr, sock))
+                    client_thread.start()
+                except socket.timeout:
+                    continue
+                except KeyboardInterrupt:
+                    break
+        
+        logger.info("Secure Drop Server stopped")
+        discovery_server_thread.join()
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in the server: {e}")
+        print("An unexpected error occurred in the server.")
+    finally:
+        if sock:
             try:
-                server_socket.settimeout(1.0)
-                conn, addr = server_socket.accept()
-                logger.info(f"Accepted connection from {addr}")
-                client_thread = threading.Thread(target=handle_client, args=(conn, addr))
-                client_thread.start()
-            except socket.timeout:
-                continue
-            except KeyboardInterrupt:
-                break
-    
-    logger.info("Secure Drop Server stopped")
-    discovery_server_thread.join()
+                sock.close()
+                logger.info("Closed main socket")
+            except Exception as e:
+                logger.error(f"Error closing main socket: {e}")
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)

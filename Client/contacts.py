@@ -89,6 +89,7 @@ def _discover_servers() -> list:
         if time.time() - start_time > 2:
             break
     client_discovery_socket.close() 
+    return servers
 
 def sync_contacts():
     """
@@ -120,8 +121,17 @@ def sync_contacts():
     
     with open(sdutils.CONTACTS_JSON_PATH, "wb") as file:
         file.write(sdutils.encrypt_and_sign(json.dumps({"contacts": contacts}).encode("utf-8")))
-    
+
     servers = _discover_servers()        
+    if not servers:
+        logger.warning("No servers found")
+        return
+    elif servers is None:
+        logger.warning("Failed to discover servers")
+        return
+    elif len(servers) == 0:
+        logger.warning("No servers found")
+        return
 
     for server in servers:
         SERVER_PORT = 23325
@@ -205,7 +215,7 @@ def sync_contacts():
                 data = json.loads(data.decode("utf-8"))
                 contacts = data["contacts"]
             for contact in contacts:
-                if contact["name"] == server_name and contact["email"] == server_email:
+                if contact["name"].lower() == server_name.lower() and contact["email"].lower() == server_email.lower():
                     contact["online"] = True
             
             with open(sdutils.CONTACTS_JSON_PATH, "wb") as file:
@@ -362,7 +372,7 @@ def send_file(email: str, path: str) -> None:
             client_socket.send(command)
             
             encrypted_username = sdutils.pgp_encrypt_and_sign_data(sdutils._username, sender_public_key)
-            encrypted_email = sdutils.pgp_encrypt_and_sign_data(email, sender_public_key)
+            encrypted_email = sdutils.pgp_encrypt_and_sign_data(sdutils._email, sender_public_key)
             client_socket.send(encrypted_username)
             client_socket.send(encrypted_email)
             
@@ -371,19 +381,23 @@ def send_file(email: str, path: str) -> None:
             server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
             server_username = sdutils.pgp_decrypt_and_verify_data(encrypted_server_username, sender_public_key)
             
+            file_name = os.path.basename(path)
+            encrypted_file_name = sdutils.pgp_encrypt_and_sign_data(file_name, sender_public_key)
+            client_socket.send(encrypted_file_name)
+            
             if server_username == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
                 logger.warning(f"Server {server} has a contact mismatch")
                 continue
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 contacts_data = sdutils.decrypt_and_verify(file.read())
-                if data is None:
+                if contacts_data is None:
                     raise ValueError("Decryption and verification failed.")
                 contacts_data = json.loads(contacts_data.decode("utf-8"))
-                contacts = data["contacts"]
+                contacts = contacts_data["contacts"]
             
             for contact in contacts:
-                if contact["name"] == server_username and contact["email"] == server_email:
+                if contact["name"].lower() == server_username.lower() and contact["email"].lower() == server_email.lower():
                     with open(path, "r") as file:
                         data = file.read()
                     encrypted_data = sdutils.pgp_encrypt_and_sign_data(data, sender_public_key)
