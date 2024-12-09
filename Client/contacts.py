@@ -13,14 +13,15 @@ logger = logging.getLogger()
 def _verify_contact_file() -> None:
     """
     Verifies the existence and integrity of the contacts JSON file.
-    This function checks if the contacts JSON file exists. If it does not exist,
-    it creates a new file with an empty contacts list, encrypts, and signs it.
-    If the file exists, it reads the file and checks if the data is properly
-    encrypted and signed. If the data is invalid or decryption and verification
-    fail, it overwrites the file with a new encrypted and signed empty contacts list.
+    This function checks if the contacts JSON file exists at the path specified by
+    `sdutils.CONTACTS_JSON_PATH`. If the file does not exist, it creates a new file
+    with an empty contacts list, encrypts, and signs it. If the file exists, it reads
+    the file and verifies its integrity. If the file is not properly encrypted or
+    signed, or if it does not contain a valid contacts list, it overwrites the file
+    with a new encrypted and signed empty contacts list.
     Raises:
-        ValueError: If decryption and verification of the existing file data fail.
-        SystemExit: If any other exception occurs during the process.
+        ValueError: If decryption and verification of the existing file fail.
+        Exception: For any other errors that occur during the file verification process.
     """
     sdutils = SecureDropUtils()
     try:
@@ -48,6 +49,13 @@ def _verify_contact_file() -> None:
         sys.exit()
 
 def _discover_servers() -> list:
+    """
+    Discovers SecureDrop servers on the local network.
+    This function broadcasts a discovery message to the local network and listens for responses from SecureDrop servers.
+    It verifies the server's certificate using a CA certificate and collects the addresses of the discovered servers.
+    Returns:
+        list: A list of tuples containing the addresses of the discovered servers.
+    """
     sdutils = SecureDropUtils()
     DISCOVERY_PORT = 23326
     servers = []
@@ -93,17 +101,22 @@ def _discover_servers() -> list:
 
 def sync_contacts():
     """
-    Synchronizes the contacts with the server.
-
-    This function discovers servers, verifies their certificates, and synchronizes the contacts list.
-    It updates the online status of contacts based on the server responses.
-
-    Parameters:
-        contacts (list): The list of contacts to be synchronized.
-
+    Synchronizes the contacts by performing the following steps:
+    1. Reads and decrypts the contacts data from a JSON file.
+    2. Sets all contacts' online status to False.
+    3. Encrypts and writes the updated contacts data back to the JSON file.
+    4. Discovers available servers.
+    5. For each discovered server:
+        a. Establishes a secure SSL connection.
+        b. Authenticates the server using its public key.
+        c. Exchanges and verifies a shared secret key.
+        d. Sends a synchronization command to the server.
+        e. Sends the client's username and email to the server.
+        f. Receives and decrypts the server's name and email.
+        g. Updates the contact's online status if the server's name and email match a contact.
+    6. Handles exceptions and logs appropriate warnings or errors.
     Raises:
-        ValueError: If decryption and verification of the contacts file fails.
-        Exception: For any other errors that occur during the process.
+        Exception: If any error occurs during the synchronization process.
     """
     sdutils = SecureDropUtils()
     with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
@@ -230,9 +243,19 @@ def sync_contacts():
 def add_contact() -> None:
     """
     Adds a new contact to the contacts list.
-    Prompts the user to enter a full name and email address for the new contact.
-    The contact is then added to the existing contacts list stored in a JSON file.
-    The file is encrypted and signed for security.
+    Prompts the user to enter the full name and email address of the new contact.
+    The contact is then added to the contacts list stored in a JSON file, which is
+    encrypted and signed for security.
+    The function performs the following steps:
+    1. Initializes SecureDropUtils.
+    2. Verifies the contact file.
+    3. Prompts the user for the contact's full name and email address.
+    4. Decrypts and verifies the existing contacts JSON file.
+    5. Adds the new contact to the contacts list.
+    6. Encrypts and signs the updated contacts list and writes it back to the file.
+    7. Logs the addition of the new contact.
+    If an error occurs during any of these steps, an error message is printed,
+    the exception is logged, and the program exits.
     Raises:
         ValueError: If decryption and verification of the contacts file fails.
         Exception: For any other errors that occur during the process.
@@ -271,21 +294,18 @@ def add_contact() -> None:
 
 def list_contacts() -> None:
     """
-    Lists all contacts from the encrypted contacts file.
-
+    Lists the contacts from the SecureDrop contacts file, displaying them as online or offline.
     This function performs the following steps:
-    1. Verifies the existence and integrity of the contacts file.
-    2. Opens and reads the encrypted contacts file.
-    3. Decrypts and verifies the contents of the file.
-    4. Parses the decrypted data as JSON.
-    5. Synchronizes the contacts.
-    6. Prints the list of contacts, indicating their online status.
-
-    If any error occurs during these steps, an error message is printed and the program exits.
-
+    1. Initializes the SecureDropUtils instance.
+    2. Verifies the contact file.
+    3. Synchronizes the contacts.
+    4. Opens and reads the encrypted contacts JSON file.
+    5. Decrypts and verifies the file content.
+    6. Parses the JSON data to extract contacts.
+    7. Prints the list of online and offline contacts.
+    If any error occurs during these steps, it catches the exception, prints an error message, and exits the program.
     Raises:
-        ValueError: If decryption and verification of the file contents fail.
-        Exception: For any other exceptions that occur during the process.
+        ValueError: If decryption and verification of the contacts file fail.
     """
     try:
         sdutils = SecureDropUtils()
@@ -312,6 +332,27 @@ def list_contacts() -> None:
         sys.exit()
 
 def send_file(email: str, path: str) -> None:
+    """
+    Sends a file to a list of discovered servers using a secure connection.
+    This function performs the following steps:
+    1. Synchronizes contacts.
+    2. Discovers servers.
+    3. Establishes a secure SSL connection with each server.
+    4. Authenticates the server using its public key.
+    5. Exchanges and verifies a shared secret key.
+    6. Sends a challenge to the server and verifies the response.
+    7. Sends the command to send a file.
+    8. Encrypts and sends the username and email.
+    9. Verifies the server's username and email.
+    10. Encrypts and sends the file name.
+    11. Encrypts and sends the file data if the server's contact information matches.
+    Args:
+        email (str): The email address to send the file to.
+        path (str): The file path of the file to be sent.
+    Raises:
+        ValueError: If decryption and verification of contacts data fails.
+        Exception: If any other error occurs during the process.
+    """
     sdutils = SecureDropUtils()
 
     sync_contacts()

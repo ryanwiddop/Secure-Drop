@@ -10,34 +10,6 @@ from pathlib import Path
 logger = logging.getLogger()
 
 class SecureDropUtils:
-    """
-    SecureDropUtils is a singleton class that provides various cryptographic utilities for secure data transmission and storage.
-    Attributes:
-        __instance (SecureDropUtils): The singleton instance of the class.
-        _private_key (RSA.RsaKey): The private RSA key used for encryption and signing.
-        _public_key (RSA.RsaKey): The public RSA key used for encryption and verification.
-        _username (str): The username associated with the keys.
-        _email (str): The email associated with the keys.
-        __initialized (bool): A flag indicating whether the instance has been initialized.
-    Methods:
-        pgp_encrypt_and_sign_data(data: str) -> dict:
-            Encrypts and signs the given data using PGP encryption.
-        pgp_decrypt_and_verify_data(data: dict) -> str:
-            Decrypts and verifies the given encrypted data using PGP decryption.
-        encrypt_and_sign(data: bytes) -> bytes:
-            Encrypts and signs the given data using RSA and AES encryption.
-        decrypt_and_verify(data: bytes) -> bytes:
-            Decrypts and verifies the given encrypted data using RSA and AES decryption.
-        hash_data(data: str) -> str:
-            Hashes the given data using SHA-512 with a random salt and returns the salted hash.
-        verify_hash(data: str, hashed_data: str) -> bool:
-        verify_key_pair() -> None:
-            Verifies the existence of the key pair and generates a new one if not present.
-        encrypt_private_key(password: str) -> None:
-            Encrypts the private key with the given password and stores it securely.
-        decrypt_private_key(password: str) -> bool:
-            Decrypts the private key with the given password and loads it into the instance.
-    """
     _instance = None
     
     def __new__(cls, *args, **kwargs):
@@ -46,6 +18,26 @@ class SecureDropUtils:
         return cls._instance
         
     def __init__(self):
+        """
+        Initializes the secure drop utility class with default file paths and attributes.
+
+        Attributes:
+            _PUBLIC_KEY_PATH (str): Path to the public key file.
+            _PRIVATE_KEY_PATH (str): Path to the private key file.
+            CA_CERT_PATH (str): Path to the CA certificate file.
+            CLIENT_CERT_PATH (str): Path to the client certificate file.
+            USER_JSON_PATH (str): Path to the user JSON file.
+            CONTACTS_JSON_PATH (str): Path to the contacts JSON file.
+            LOG_FILE_PATH (str): Path to the log file.
+            INBOX_PATH (str): Path to the inbox directory.
+            _private_key (None): Placeholder for the private key.
+            _public_key (None): Placeholder for the public key.
+            _username (None): Placeholder for the username.
+            _email (None): Placeholder for the email.
+
+        Note:
+            The directories for LOG_FILE_PATH and INBOX_PATH are created if they do not exist.
+        """
         if not hasattr(self, "_PUBLIC_KEY_PATH"):
             self._PUBLIC_KEY_PATH = str(Path(__file__).parent / ".keys/client.pub")
         if not hasattr(self, "_PRIVATE_KEY_PATH"):
@@ -76,6 +68,22 @@ class SecureDropUtils:
             self._email = None
 
     def pgp_encrypt_and_sign_data(self, data: str, recipient_public_key: RSA.RsaKey) -> bytes:
+        """
+        Encrypts and signs the given data using PGP (Pretty Good Privacy) encryption.
+        This method performs the following steps:
+        1. Generates a random session key for AES encryption.
+        2. Encrypts the session key using the recipient's RSA public key.
+        3. Encrypts the data using AES encryption with the generated session key.
+        4. Creates a SHA-512 hash of the data and signs it with the sender's private RSA key.
+        5. Packages the encrypted session key, AES nonce, ciphertext, and signature into a single byte sequence.
+        Args:
+            data (str): The plaintext data to be encrypted and signed.
+            recipient_public_key (RSA.RsaKey): The recipient's RSA public key used to encrypt the session key.
+        Returns:
+            bytes: A byte sequence containing the encrypted session key, AES nonce, ciphertext, and signature.
+        Raises:
+            RuntimeError: If an error occurs during the encryption or signing process.
+        """
         try:
             
             session_key = get_random_bytes(32)
@@ -104,6 +112,19 @@ class SecureDropUtils:
             raise RuntimeError("An error occurred while encrypting the data.")
         
     def pgp_decrypt_and_verify_data(self, data: bytes, sender_public_key: RSA.RsaKey) -> bytes:
+        """
+        Decrypts and verifies PGP encrypted data.
+        This method decrypts data that was encrypted using PGP encryption and verifies its signature.
+        The data is expected to be in a specific format, starting with "ENCRYPTED\n" followed by the
+        encrypted session key, nonce, tag, ciphertext, and signature.
+        Args:
+            data (bytes): The encrypted data to be decrypted and verified.
+            sender_public_key (RSA.RsaKey): The sender's RSA public key used for signature verification.
+        Returns:
+            bytes: The decrypted data if decryption and verification are successful, otherwise None.
+        Raises:
+            ValueError: If the data format is invalid or signature verification fails.
+        """
         try:
             if not data.startswith(b"ENCRYPTED\n"):
                 raise ValueError("Invalid format.")
@@ -156,20 +177,20 @@ class SecureDropUtils:
         
     def encrypt_and_sign(self, data: bytes) -> bytes:
         """
-        Encrypts and signs the given data using RSA and AES encryption algorithms.
+        Encrypts and signs the given data using RSA and AES encryption.
         This method performs the following steps:
         1. Generates a random session key for AES encryption.
-        2. Encrypts the session key using the user"s RSA public key.
-        3. Encrypts the data using the AES session key in EAX mode.
-        4. Computes a SHA-512 hash of the data and signs it using the user"s RSA private key.
-        5. Packages the encrypted session key, AES nonce, authentication tag, ciphertext, and signature into a single byte string.
+        2. Encrypts the session key using the provided RSA public key.
+        3. Encrypts the data using AES encryption with the generated session key.
+        4. Computes a SHA-512 hash of the data and signs it using the provided RSA private key.
+        5. Combines the encrypted session key, AES nonce, AES tag, ciphertext, and signature into a single byte sequence.
         Args:
             data (bytes): The data to be encrypted and signed.
         Returns:
-            bytes: A byte string containing the encrypted session key, AES nonce, authentication tag, ciphertext, and signature.
+            bytes: A byte sequence containing the encrypted session key, AES nonce, AES tag, ciphertext, and signature.
             None: If an error occurs during the encryption or signing process.
         Raises:
-            Exception: If an error occurs during the encryption or signing process.
+            ValueError: If the public or private key is not found.
         """
         try:
             if self._public_key is None or self._private_key is None:
@@ -203,7 +224,21 @@ class SecureDropUtils:
             
     def decrypt_and_verify(self, data: bytes) -> bytes:
         """
-        Decrypts and verifies the provided encrypted data.
+        Decrypts and verifies the given encrypted data.
+        The data is expected to be in a specific format:
+        - Starts with the string "ENCRYPTED\n"
+        - Followed by the length and content of the encrypted session key
+        - Followed by the length and content of the nonce
+        - Followed by the length and content of the tag
+        - Followed by the length and content of the ciphertext
+        - Followed by the length and content of the signature
+        The method performs the following steps:
+        1. Checks if the data starts with "ENCRYPTED\n".
+        2. Extracts the encrypted session key, nonce, tag, ciphertext, and signature from the data.
+        3. Decrypts the session key using the RSA private key.
+        4. Decrypts the ciphertext using the decrypted session key and nonce.
+        5. Verifies the integrity of the decrypted data using the tag.
+        6. Verifies the signature of the decrypted data using the RSA public key.
         Args:
             data (bytes): The encrypted data to be decrypted and verified.
         Returns:
@@ -271,10 +306,10 @@ class SecureDropUtils:
         Args:
             data (str): The data to be hashed.
         Returns:
-            str: The salted hash of the data in the format "$salt$hashed_password" where both salt and hashed_password are base64 encoded.
+            str: The salted hash of the data in the format "$salt$hashed_password", both in base64 encoding.
             None: If an error occurs during hashing.
         Raises:
-            Exception: If an error occurs during hashing, the exception is caught and None is returned.
+            Exception: If an error occurs during hashing, it will be caught and printed.
         """
         try:
             salt = get_random_bytes(16)
@@ -296,7 +331,7 @@ class SecureDropUtils:
         """
         Verifies if the provided data matches the hashed data.
         Args:
-            data (str): The original data to verify.
+            data (str): The plain text data to verify.
             hashed_data (str): The hashed data in the format "salt$hashed_password".
         Returns:
             bool: True if the data matches the hashed data, False otherwise.
@@ -317,22 +352,20 @@ class SecureDropUtils:
             return False
 
     def verify_key_pair(self) -> None:
+        """
+        Verifies the existence and validity of the RSA key pair.
+        This method checks if the public and private key files exist at the specified paths.
+        If the files exist, it attempts to read and import the keys to ensure they are in the correct format.
+        If any error occurs during this process, an appropriate exception is raised and the program exits.
+        Raises:
+            FileNotFoundError: If either the public or private key file does not exist.
+            ValueError: If the private or public key is not in the correct format.
+            Exception: For any other exceptions that occur during the verification process.
+        """
         try:
             if not os.path.exists(self._PUBLIC_KEY_PATH) or not os.path.exists(self._PRIVATE_KEY_PATH):
                 raise FileNotFoundError("Key pair not found.")
-                # os.makedirs(str(Path(__file__).parent / ".keys/"), exist_ok=True)  
-                              
-                # private_key = RSA.generate(2048)
-                # public_key = private_key.publickey()
-                # self._private_key = private_key
-                # self._public_key = public_key
-                
-                # with open(self._PRIVATE_KEY_PATH, "wb") as private_file:
-                #     private_file.write(private_key.export_key())
-                #     os.chmod(self._PRIVATE_KEY_PATH, 0o660)
-                # with open(self._PUBLIC_KEY_PATH, "wb") as public_file:
-                #     public_file.write(public_key.export_key())
-                #     os.chmod(self._PUBLIC_KEY_PATH, 0o660)
+            
             with open(self._PRIVATE_KEY_PATH, "rb") as file:
                 private_key = file.read()
                 if private_key.startswith(b"-----BEGIN RSA PRIVATE KEY-----"):
@@ -357,11 +390,11 @@ class SecureDropUtils:
     def encrypt_private_key(self, password: str) -> None:
         """
         Encrypts the private key stored at the specified path using the provided password.
-        This function reads the private key from the file, encrypts it using AES encryption
-        with a key derived from the provided password and a random salt using PBKDF2, and
-        then writes the encrypted private key back to the file.
+        This method reads the private key from the file, encrypts it using AES encryption
+        with a key derived from the provided password and a randomly generated salt, and
+        then writes the encrypted key back to the file.
         Args:
-            password (str): The password to use for encrypting the private key.
+            password (str): The password to use for deriving the encryption key.
         Raises:
             Exception: If an error occurs during the encryption process, an exception is caught
                        and an error message is printed.
@@ -389,40 +422,21 @@ class SecureDropUtils:
         except:
             print("An error occurred while encrypting the private key with password.")
             print("Exception:", sys.exc_info()[0])
-         
-    # DEPRECATED
-    # def encrypt_private_key_on_exit(self) -> None:
-    #     try:
-    #         with open(_PRIVATE_KEY_PATH, "rb") as file:
-    #             private_key = RSA.import_key(file.read())
-            
-    #         cipher = AES.new(exit_key, AES.MODE_EAX)
-    #         ciphertext, tag = cipher.encrypt_and_digest(private_key.export_key())
-
-    #         with open(_PRIVATE_KEY_PATH, "wb") as file:
-    #             result = (
-    #                 b"ENCRYPTED\n" +
-    #                 struct.pack("I", len(exit_key_salt)) + exit_key_salt +
-    #                 struct.pack("I", len(cipher.nonce)) + cipher.nonce +
-    #                 struct.pack("I", len(tag)) + tag +
-    #                 struct.pack("I", len(ciphertext)) + ciphertext
-    #             )
-    #             file.write(result)
-            
-    #     except:
-    #         print("An error occurred while encrypting the private key with exit key.")
-    #         print("Exception:", sys.exc_info()[0])
     
     def decrypt_private_key(self, password: str) -> bool:
         """
         Decrypts the private key using the provided password.
-        This method attempts to decrypt the private key stored at the path specified by `_PRIVATE_KEY_PATH`.
-        If the private key is already in plaintext format, it will be re-encrypted using the provided password.
-        Otherwise, it will decrypt the private key using the provided password and the stored salt, nonce, and tag.
+        This method attempts to decrypt the private key stored at the path specified by 
+        `self._PRIVATE_KEY_PATH`. If the private key is already in an unencrypted format, 
+        it will re-encrypt it using the provided password. If the private key is in an 
+        encrypted format, it will decrypt it using the provided password and load it into 
+        `self._private_key`. The corresponding public key is loaded from the path specified 
+        by `self._PUBLIC_KEY_PATH`.
         Args:
             password (str): The password used to decrypt the private key.
         Returns:
-            bool: True if the decryption is successful, False otherwise.
+            bool: True if the private key was successfully decrypted or re-encrypted, 
+                  False otherwise.
         """
         try:
             with open(self._PRIVATE_KEY_PATH, "rb") as file:
@@ -471,4 +485,3 @@ class SecureDropUtils:
             return True
         except Exception as e:
             return False
-        

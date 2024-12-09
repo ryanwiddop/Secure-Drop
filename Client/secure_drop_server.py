@@ -16,13 +16,25 @@ def signal_handler(signum, frame):
 
 def handle_client(conn, addr, sock):
     """
-    Handles the client connection, performs SSL handshake, exchanges encrypted data,
-    verifies the challenge response, and processes commands from the client.
-
+    Handles the communication with a connected client over a secure SSL/TLS connection.
     Args:
-        conn (socket.socket): The client connection socket.
-        addr (tuple): The client address.
-        sock (socket.socket): The Unix socket for communication with the main process.
+        conn (socket.socket): The client socket connection.
+        addr (tuple): The address of the connected client.
+        sock (socket.socket): The server socket.
+    Raises:
+        ssl.SSLError: If an SSL error occurs during the communication.
+        socket.error: If a socket error occurs during the communication.
+        ValueError: If a value error occurs during the communication.
+        Exception: If an unexpected error occurs during the communication.
+    The function performs the following steps:
+        1. Verifies the contact file.
+        2. Creates an SSL context and loads the server's certificate and private key.
+        3. Wraps the client connection with the SSL context.
+        4. Retrieves and verifies the client's public key.
+        5. Generates and sends a shared secret key to the client.
+        6. Verifies the client's challenge response.
+        7. Receives and processes commands from the client, such as "SYNC_CONTACTS" and "SEND_FILE".
+        8. Handles errors and closes the connection gracefully.
     """
     try:
         _verify_contact_file()
@@ -229,7 +241,11 @@ def handle_client(conn, addr, sock):
 
 def discovery_server():
     """
-    Sets up a discovery server to listen for incoming broadcast messages from clients.
+    The server listens on a specified port for discovery requests from clients. When a valid
+    discovery request is received, the server responds with its certificate.
+    The server runs indefinitely until interrupted by a KeyboardInterrupt or an exception occurs.
+    Raises:
+        Exception: If an error occurs while setting up or running the server.
     """
     try:
         sdutils = SecureDropUtils()
@@ -267,12 +283,6 @@ def discovery_server():
         logger.info("Discovery server stopped {e}")
 
 def main():
-    """
-    Sets up the server socket, binds it to a port, listens for incoming connections,
-    and spawns a new thread to handle each client connection.
-
-    Uses SSL for secure communication and logs important events.
-    """
     sock = None
     try:
         sdutils = SecureDropUtils()

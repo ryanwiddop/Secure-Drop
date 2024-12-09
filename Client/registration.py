@@ -8,18 +8,18 @@ logger = logging.getLogger()
 
 def _get_registered_user() -> bool:
     """
-    Checks if a registered user exists by reading and validating the user data from a file.
-    The function attempts to read the user data from a file specified by USER_JSON_PATH.
-    It checks if the data starts with the string "ENCRYPTED\n" and if the length of the data
-    is greater than 9 bytes. If these conditions are met, it returns True indicating that
-    a registered user exists. Otherwise, it returns False.
+    Checks if a registered user exists by reading and validating the user data file.
+    This function attempts to read a user data file specified by `SecureDropUtils.USER_JSON_PATH`.
+    It checks if the file starts with the string "ENCRYPTED\n" and has a length greater than 9 bytes.
+    If these conditions are met, it returns True, indicating a registered user exists.
+    Otherwise, it returns False.
     Returns:
         bool: True if a registered user exists, False otherwise.
     Exceptions:
-        KeyError: If a KeyError occurs during file operations.
-        FileNotFoundError: If the file specified by USER_JSON_PATH is not found.
+        KeyError: If a key error occurs while accessing the file.
+        FileNotFoundError: If the user data file is not found.
         json.JSONDecodeError: If there is an error decoding JSON from the file.
-        SystemExit: If a JSON decoding error occurs, the program will exit.
+        SystemExit: If a JSON decoding error occurs, the system will exit.
         Exception: If any other exception occurs, it prints the exception and returns None.
     """
     try:
@@ -81,19 +81,19 @@ def _register_new_user(username: str, email: str, password: str) -> None:
             
 def _verify_user(email: str, password: str) -> bool: 
     """
-    Verifies the user"s email and password.
-    This function attempts to verify a user"s email and password by decrypting
-    and verifying the stored user data. If the verification is successful, it
-    sets the user information in the system.
+    Verifies the user's email and password by decrypting and verifying the stored user data.
     Args:
-        email (str): The email address of the user.
-        password (str): The password of the user.
+        email (str): The email address of the user to verify.
+        password (str): The password of the user to verify.
     Returns:
         bool: True if the user is successfully verified, False otherwise.
     Raises:
         FileNotFoundError: If the user data file is not found.
-        json.JSONDecodeError: If there is an error decoding the JSON data.
-        Exception: For any other exceptions that occur during verification.
+        json.JSONDecodeError: If there is an error decoding the JSON data from the file.
+        Exception: If any other error occurs during the verification process.
+    Notes:
+        - This function uses the SecureDropUtils class to handle decryption and verification.
+        - The function will print error messages and exit the program if critical errors occur.
     """
     try:
         sdutils = SecureDropUtils()
@@ -129,24 +129,22 @@ def _verify_user(email: str, password: str) -> bool:
                  
 def startup() -> None:
     """
-    Handles the startup process for the SecureDrop client.
+    Handles the startup process for the client registration.
     This function performs the following steps:
-    1. Verifies the key pair using `sdutils.verify_key_pair()`.
+    1. Initializes the SecureDropUtils instance.
     2. Checks if there are any registered users.
-       - If no users are registered, prompts the user to register a new user.
-         - Collects the user"s full name, email address, and password.
-         - Ensures the password and re-entered password match.
-         - Registers the new user and encrypts the private key with the password.
-         - Exits the program after registration.
-       - If users are already registered, prompts the user to log in.
-         - Collects the user"s email address and password.
-         - Verifies the user"s credentials.
-         - If the credentials are invalid, prompts the user to re-enter them.
-         - If the credentials are valid, welcomes the user.
-    If an error occurs during the startup process (excluding SystemExit), 
-    it prints an error message and the exception type, then exits the program.
+    3. If no users are registered, prompts the user to register a new user by:
+        - Verifying the key pair.
+        - Collecting user details (name, email, password).
+        - Ensuring the passwords match.
+        - Registering the new user.
+        - Encrypting the private key with the provided password.
+    4. If users are already registered, prompts the user to log in by:
+        - Collecting the email and password.
+        - Verifying the user credentials.
+    5. Logs the appropriate messages and handles any exceptions that occur during the process.
     Raises:
-        SystemExit: Exits the program in various scenarios.
+        Exception: If an error occurs during the startup process.
     """
     try:
         sdutils = SecureDropUtils()

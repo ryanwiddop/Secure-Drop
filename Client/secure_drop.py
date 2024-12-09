@@ -1,10 +1,17 @@
-import sys, subprocess, logging, socket, os
+import subprocess, logging, socket, os
 from registration import startup
 from contacts import add_contact, list_contacts, send_file
 from secure_drop_utils import SecureDropUtils
 from pathlib import Path
 
 def start_secure_drop_server() -> tuple:
+    """
+    Starts the SecureDrop server as a subprocess and establishes a socket pair for communication.
+    This function initializes the SecureDrop server by creating a subprocess and setting up a socket pair
+    for inter-process communication. It also encrypts and signs the username and email using PGP.
+    Returns:
+        tuple: A tuple containing the subprocess.Popen object representing the server process and the parent socket object.
+    """
     sdutils = SecureDropUtils()
     private_key = sdutils._private_key.export_key()
     username = sdutils._username
@@ -29,6 +36,21 @@ def start_secure_drop_server() -> tuple:
     return process, parent_sock
 
 def secure_drop_shell():
+    """
+    Starts the Secure Drop shell interface for managing secure file transfers.
+    This function initializes the Secure Drop server and provides a command-line
+    interface for the user to interact with the server. The available commands are:
+    - "help": Display the list of available commands.
+    - "add": Add a new contact.
+    - "list": List all online contacts.
+    - "send <contact> <file_path>": Transfer a file to a specified contact.
+    - "exit": Exit the Secure Drop shell.
+    The function handles various exceptions and ensures that the server and socket
+    are properly closed upon termination.
+    Raises:
+        SystemExit: If the system exits unexpectedly.
+        Exception: For any other exceptions that occur during execution.
+    """
     process = None
     sock = None
     try:
