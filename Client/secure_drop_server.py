@@ -181,7 +181,20 @@ def handle_client(conn, addr, sock):
             encrypted_file_name = conn.recv(1024)
             file_name = sdutils.pgp_decrypt_and_verify_data(encrypted_file_name, sender_public_key)
             
-            encrypted_file = conn.recv(4096)
+            encrypted_file_size = conn.recv(1024)
+            file_size = sdutils.pgp_decrypt_and_verify_data(encrypted_file_size, sender_public_key)
+            file_size = int(file_size)
+            
+            encrypted_is_file_bytes = conn.recv(1024)
+            is_file_bytes = sdutils.pgp_decrypt_and_verify_data(encrypted_is_file_bytes, sender_public_key)
+
+            
+            encrypted_file = b""
+            while len(encrypted_file) < file_size:
+                chunk = conn.recv(8192)
+                if not chunk:
+                    break
+                encrypted_file += chunk
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 data = sdutils.decrypt_and_verify(file.read())
@@ -211,8 +224,12 @@ def handle_client(conn, addr, sock):
                                     logger.warning(f"Failed to decrypt and verify file from {addr}")
                                     conn.close()
                                     return
-                                with open(sdutils.INBOX_PATH + "/" + file_name, "w") as file:
-                                    file.write(file_contents)
+                                if is_file_bytes == "True":
+                                    with open(sdutils.INBOX_PATH + "/" + file_name, "wb") as file:
+                                        file.write(bytes.fromhex(file_contents))
+                                else:
+                                    with open(sdutils.INBOX_PATH + "/" + file_name, "w") as file:
+                                        file.write(file_contents)
                             break
                         except Exception as e:
                             logger.error(f"Failed to write file to inbox: {e}")

@@ -56,3 +56,5 @@ Client/.db
 Client/.keys
 CA
 Client/__pycache__
+large_file_generator.py
+*.txt

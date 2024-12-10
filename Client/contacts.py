@@ -422,13 +422,13 @@ def send_file(email: str, path: str) -> None:
             server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
             server_username = sdutils.pgp_decrypt_and_verify_data(encrypted_server_username, sender_public_key)
             
-            file_name = os.path.basename(path)
-            encrypted_file_name = sdutils.pgp_encrypt_and_sign_data(file_name, sender_public_key)
-            client_socket.send(encrypted_file_name)
-            
             if server_username == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
                 logger.warning(f"Server {server} has a contact mismatch")
                 continue
+            
+            file_name = os.path.basename(path)
+            encrypted_file_name = sdutils.pgp_encrypt_and_sign_data(file_name, sender_public_key)
+            client_socket.send(encrypted_file_name)
             
             with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
                 contacts_data = sdutils.decrypt_and_verify(file.read())
@@ -437,14 +437,43 @@ def send_file(email: str, path: str) -> None:
                 contacts_data = json.loads(contacts_data.decode("utf-8"))
                 contacts = contacts_data["contacts"]
             
+            CHUNK_SIZE = 8192  # 8 KB
+
             for contact in contacts:
+                is_file_bytes = False
                 if contact["name"].lower() == server_username.lower() and contact["email"].lower() == server_email.lower():
-                    with open(path, "r") as file:
-                        data = file.read()
-                    encrypted_data = sdutils.pgp_encrypt_and_sign_data(data, sender_public_key)
-                    client_socket.send(encrypted_data)
+                    try:
+                        with open(path, "r") as file:
+                            data = file.read()
+                    except UnicodeDecodeError:
+                        with open(path, "rb") as file:
+                            data = file.read()
+                            if data is None:
+                                logger.warning(f"Failed to read file: {path}")
+                                continue
+                            is_file_bytes = True
+                    if is_file_bytes:
+                        encrypted_data = sdutils.pgp_encrypt_and_sign_data(data.hex(), sender_public_key)
+                    else:
+                        encrypted_data = sdutils.pgp_encrypt_and_sign_data(data, sender_public_key)
+                    file_size = len(encrypted_data)
+                    encrypted_file_size = sdutils.pgp_encrypt_and_sign_data(str(file_size), sender_public_key)
+                    is_file_bytes_encrypted = sdutils.pgp_encrypt_and_sign_data(str(is_file_bytes), sender_public_key)
+                    
+                    try:
+                        client_socket.send(encrypted_file_size)
+                        client_socket.send(is_file_bytes_encrypted)
+                        for i in range(0, len(encrypted_data), CHUNK_SIZE):
+                            chunk = encrypted_data[i:i + CHUNK_SIZE]
+                            client_socket.send(chunk)
+                    except ssl.SSLEOFError as e:
+                        logger.error(f"SSL error occurred while sending data: {e}")
+                        break
+                    except Exception as e:
+                        logger.error(f"An error occurred while sending data: {e}")
+                        break
+
                     break
-            
             client_socket.close()
                         
         except Exception as e:
