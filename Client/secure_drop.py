@@ -127,7 +127,7 @@ def main():
         
         with open(sdutils.LOCK_FILE, "w") as f:
             f.write(str(os.getpid()))
-                
+
         startup()
     except KeyboardInterrupt:
         print("\nExiting SecureDrop.")
