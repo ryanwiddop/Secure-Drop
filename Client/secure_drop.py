@@ -1,4 +1,4 @@
-import subprocess, logging, socket, os, signal
+import subprocess, logging, socket, os, sys
 from registration import startup
 from contacts import add_contact, list_contacts, send_file
 from secure_drop_utils import SecureDropUtils
@@ -82,7 +82,7 @@ def secure_drop_shell():
                 send_file(args[1], args[2])
                 pass
             elif command == "exit":
-                break
+                sys.exit()
             elif command == "y":
                 try:
                     sock.sendall(b"y")

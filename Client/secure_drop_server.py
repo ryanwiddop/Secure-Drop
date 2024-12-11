@@ -370,6 +370,11 @@ def main():
         
         logger.info("Secure Drop Server stopped")
         discovery_server_thread.join()
+        with open(sdutils.LOCK_FILE, "r") as file:
+            pid = int(file.read().strip())
+            if pid == os.getpid():
+                os.remove(sdutils.LOCK_FILE)
+        logger.info("Lock file freed")
     except Exception as e:
         logger.error(f"An unexpected error occurred in the server: {e}")
         print("An unexpected error occurred in the server.")
@@ -378,6 +383,11 @@ def main():
             try:
                 sock.close()
                 logger.info("Closed main socket")
+                with open(sdutils.LOCK_FILE, "r") as file:
+                    pid = int(file.read().strip())
+                    if pid == os.getpid():
+                        os.remove(sdutils.LOCK_FILE)
+                logger.info("Lock file freed")
             except Exception as e:
                 logger.error(f"Error closing main socket: {e}")
 
