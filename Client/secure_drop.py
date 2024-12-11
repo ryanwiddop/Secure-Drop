@@ -1,4 +1,4 @@
-import subprocess, logging, socket, os
+import subprocess, logging, socket, os, signal
 from registration import startup
 from contacts import add_contact, list_contacts, send_file
 from secure_drop_utils import SecureDropUtils
@@ -115,6 +115,19 @@ def main():
     )
     logger = logging.getLogger()    
     try:
+        if os.path.exists(sdutils.LOCK_FILE):
+            with open(sdutils.LOCK_FILE, "r") as f:
+                pid = int(f.read().strip())
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    print(f"Killed existing Secure Drop server with PID {pid}.")
+                except ProcessLookupError:
+                    print(f"No process found with PID {pid}. Removing stale lock file.")
+                os.remove(sdutils.LOCK_FILE)
+        
+        with open(sdutils.LOCK_FILE, "w") as f:
+            f.write(str(os.getpid()))
+                
         startup()
     except KeyboardInterrupt:
         print("\nExiting SecureDrop.")

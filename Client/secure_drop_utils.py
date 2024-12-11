@@ -54,6 +54,8 @@ class SecureDropUtils:
             self.LOG_FILE_PATH = str(Path(__file__).parent / ".db/secure_drop.log")
             log_dir = Path(self.LOG_FILE_PATH).parent
             log_dir.mkdir(parents=True, exist_ok=True)
+        if not hasattr(self, "LOCK_FILE"):
+            self.LOCK_FILE = str(Path(__file__).parent / ".db/lock")
         if not hasattr(self, "INBOX_PATH"):
             self.INBOX_PATH = str(Path(__file__).parent / "inbox/")
             inbox_dir = Path(self.INBOX_PATH)
@@ -478,10 +480,13 @@ class SecureDropUtils:
             cipher = AES.new(key, AES.MODE_EAX, nonce)
             private_key = cipher.decrypt_and_verify(ciphertext, tag)
             
-            self._private_key = RSA.import_key(private_key)
-            with open(self._PUBLIC_KEY_PATH, "r") as file:
-                self._public_key = RSA.import_key(file.read())
-                
-            return True
+            if private_key.startswith(b"-----BEGIN RSA PRIVATE KEY-----"):      
+                self._private_key = RSA.import_key(private_key)
+                with open(self._PUBLIC_KEY_PATH, "r") as file:
+                    self._public_key = RSA.import_key(file.read())
+                    
+                return True
+            else:
+                return False
         except Exception as e:
             return False

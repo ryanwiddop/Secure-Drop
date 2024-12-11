@@ -356,6 +356,18 @@ def send_file(email: str, path: str) -> None:
     sdutils = SecureDropUtils()
 
     sync_contacts()
+    with open(sdutils.CONTACTS_JSON_PATH, "rb") as file:
+        data = sdutils.decrypt_and_verify(file.read())
+        if data is None:
+            raise ValueError("Decryption and verification failed.")
+        data = json.loads(data.decode("utf-8"))
+        contacts = data["contacts"]
+    for contact in contacts:
+        if contact["email"].lower() == email.lower():
+            if not contact["online"]:
+                print("  Contact is offline.")
+                return
+    
     servers = _discover_servers()
     
     for server in servers:
