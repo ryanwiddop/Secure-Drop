@@ -21,10 +21,10 @@ rm -f "$DEST_DIR"/secure_drop.py
 rm -f "$DEST_DIR"/secure_drop_server.py
 rm -f "$DEST_DIR"/secure_drop_utils.py
 
-wget -O contacts.py "$CONTACTS_URL"
-wget -O registration.py "$REGISTRATION_URL"
-wget -O secure_drop.py "$SECURE_DROP_URL"
-wget -O secure_drop_server.py "$SECURE_DROP_SERVER_URL"
-wget -O secure_drop_utils.py "$SECURE_DROP_UTILS_URL"
+wget --no-cache -O contacts.py "$CONTACTS_URL"
+wget --no-cache -O registration.py "$REGISTRATION_URL"
+wget --no-cache -O secure_drop.py "$SECURE_DROP_URL"
+wget --no-cache -O secure_drop_server.py "$SECURE_DROP_SERVER_URL"
+wget --no-cache -O secure_drop_utils.py "$SECURE_DROP_UTILS_URL"
 
 echo "Download complete. Files saved to $DEST_DIR"
