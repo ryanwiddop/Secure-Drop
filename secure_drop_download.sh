@@ -13,12 +13,18 @@ KEYS_DIR="$DEST_DIR/.keys"
 mkdir -p "$KEYS_DIR"
 
 # Download Python files from the GitHub repository
+
+# Remove existing Python files
+rm -f "$DEST_DIR"/contacts.py
+rm -f "$DEST_DIR"/registration.py
+rm -f "$DEST_DIR"/secure_drop.py
+rm -f "$DEST_DIR"/secure_drop_server.py
+rm -f "$DEST_DIR"/secure_drop_utils.py
+
 wget -O contacts.py "$CONTACTS_URL"
 wget -O registration.py "$REGISTRATION_URL"
 wget -O secure_drop.py "$SECURE_DROP_URL"
 wget -O secure_drop_server.py "$SECURE_DROP_SERVER_URL"
 wget -O secure_drop_utils.py "$SECURE_DROP_UTILS_URL"
-
-rm secure_drop_download.sh
 
 echo "Download complete. Files saved to $DEST_DIR"
