@@ -309,6 +309,8 @@ def main():
             level=logging.INFO,
             format="%(asctime)s SERVER | %(levelname)s: %(message)s"
         )
+        global logger 
+        logger = logging.getLogger()
         
         if len(sys.argv) != 2:
             print("Usage: secure_drop_server.py <socket_fd>")
@@ -341,9 +343,6 @@ def main():
         email = sdutils.pgp_decrypt_and_verify_data(encrypted_email, sdutils._public_key)
         sdutils._username = username
         sdutils._email = email
-        
-        global logger 
-        logger = logging.getLogger()
         
         HOST = ""
         PORT = 23325
