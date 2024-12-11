@@ -1,4 +1,4 @@
-import socket, ssl, threading, logging, tempfile, sys, signal, json
+import socket, ssl, threading, logging, tempfile, sys, signal, json, os
 from secure_drop_utils import SecureDropUtils
 from contacts import _verify_contact_file
 from Crypto.PublicKey import RSA
@@ -313,6 +313,18 @@ def main():
         if len(sys.argv) != 2:
             print("Usage: secure_drop_server.py <socket_fd>")
             sys.exit()
+            
+        if os.path.exists(sdutils.LOCK_FILE):
+            with open(sdutils.LOCK_FILE, "r") as file:
+                pid = int(file.read().strip())
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    logger.info(f"Killed existing Secure Drop server with PID {pid}.")
+                except ProcessLookupError:
+                    logger.info(f"No process found with PID {pid}. Removing stale lock file.")
+                os.remove(sdutils.LOCK_FILE)
+        with open(sdutils.LOCK_FILE, "w") as file:
+            file.write(str(os.getpid()))
         
         sock_fd = int(sys.argv[1])
         sock = socket.socket(fileno=sock_fd)
