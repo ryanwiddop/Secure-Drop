@@ -55,6 +55,17 @@ def secure_drop_shell():
     sock = None
     try:
         sdutils = SecureDropUtils()
+        if os.path.exists(sdutils.LOCK_FILE):
+            with open(sdutils.LOCK_FILE, "r") as file:
+                pid = int(file.read().strip())
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    print(f"Killed existing Secure Drop server with PID {pid}.")
+                except ProcessLookupError:
+                    print(f"No process found with PID {pid}. Removing stale lock file.")
+                os.remove(sdutils.LOCK_FILE)
+        with open(sdutils.LOCK_FILE, "w") as file:
+            file.write(str(os.getpid()))
         
         process, sock = start_secure_drop_server()
         print("Welcome to Secure Drop.\nType \"help\" For Commands.\n")
@@ -115,19 +126,6 @@ def main():
     )
     logger = logging.getLogger()    
     try:
-        if os.path.exists(sdutils.LOCK_FILE):
-            with open(sdutils.LOCK_FILE, "r") as f:
-                pid = int(f.read().strip())
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                    print(f"Killed existing Secure Drop server with PID {pid}.")
-                except ProcessLookupError:
-                    print(f"No process found with PID {pid}. Removing stale lock file.")
-                os.remove(sdutils.LOCK_FILE)
-        
-        with open(sdutils.LOCK_FILE, "w") as f:
-            f.write(str(os.getpid()))
-
         startup()
     except KeyboardInterrupt:
         print("\nExiting SecureDrop.")
