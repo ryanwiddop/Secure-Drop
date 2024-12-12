@@ -1,0 +1,17 @@
+subprocess
+logging
+socket
+os
+pathlib
+ssl
+threading
+tempfile
+sys
+signal
+json
+pycryptodome (Crypto)
+cryptography
+getpass
+time
+base64
+struct

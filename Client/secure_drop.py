@@ -1,6 +1,6 @@
-import subprocess, logging, socket, os, sys
+import subprocess, logging, socket, os
 from registration import startup
-from contacts import add_contact, list_contacts, send_file
+from commands import add_contact, list_contacts, send_file
 from secure_drop_utils import SecureDropUtils
 from pathlib import Path
 

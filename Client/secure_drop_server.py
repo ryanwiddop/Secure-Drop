@@ -1,6 +1,6 @@
 import socket, ssl, threading, logging, tempfile, sys, signal, json, os
 from secure_drop_utils import SecureDropUtils
-from contacts import _verify_contact_file
+from commands import _verify_contact_file
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from cryptography import x509
