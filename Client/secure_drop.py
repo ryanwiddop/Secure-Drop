@@ -51,6 +51,7 @@ def secure_drop_shell():
         SystemExit: If the system exits unexpectedly.
         Exception: For any other exceptions that occur during execution.
     """
+    logger = logging.getLogger() 
     process = None
     sock = None
     try:
@@ -82,7 +83,7 @@ def secure_drop_shell():
                 send_file(args[1], args[2])
                 pass
             elif command == "exit":
-                sys.exit()
+                break
             elif command == "y":
                 try:
                     sock.sendall(b"y")
@@ -104,6 +105,8 @@ def secure_drop_shell():
             process.wait()
         if sock:
             sock.close()
+        logger.info("Exiting SecureDrop.")
+        logger.info("-" * 50)
 
 def main():
     sdutils = SecureDropUtils()
@@ -132,20 +135,18 @@ def main():
         secure_drop_shell()
     except KeyboardInterrupt:
         print("\nExiting SecureDrop.")
-        logger.info("Exiting SecureDrop.")
-        logger.info("-" * 50)
         exit()
     except SystemExit:
-        logger.info("Exiting SecureDrop.")
-        logger.info("-" * 50)
         exit()
     except Exception as e:
         print("An error occurred.")
         print("Exception:", e)
         logger.error(f"An error occurred: {e}")
-        logger.info("Exiting SecureDrop.")
-        logger.info("-" * 50)
         exit()
+        
+    with open(sdutils.LOCK_FILE, "r") as file:
+        os.remove(sdutils.LOCK_FILE)
+    logger.info("Lock file freed")
         
 if __name__ == "__main__":
     main()
