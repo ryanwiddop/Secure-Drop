@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess, logging, socket, os
 from registration import startup
 from commands import add_contact, list_contacts, send_file
