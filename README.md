@@ -17,7 +17,7 @@
     - Assign a percentage (out of 100%) to denote each team member's contribution.
 
 # Security Workflow per Milestone (detailed)
-- Milestone 1 - User Registration:
+## Milestone 1 - User Registration:
     1. The user is prompted for a username, email, and password.
     2. The python module getpass is used to hide the password as it is typed.
     3. A salt is generated, then the password is hashed with the salt.
@@ -40,7 +40,7 @@
             It is deterministic. The same message and key will always produce the same signature value.
         6. The session key, nonce, tag, ciphertext, and signature are packed into a bytes structure and written.
 
-- Milestone 2 - User Login:
+## Milestone 2 - User Login:
     1. The user is prompted for an email and password.
     2. The python module getpass is used to hide the password as it is typed.
     3. A key is derived from the entered password using PBKDF2 (SHA512)
@@ -49,5 +49,5 @@
     6. The user json file is decrypted with decrypted private key
     7. The password is hashed using the read salt, and the hashes and emails are compared.
 
-- Milestone 3 - Adding Contacts:
+## Milestone 3 - Adding Contacts:
     1.
