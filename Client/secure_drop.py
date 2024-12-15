@@ -111,6 +111,12 @@ def secure_drop_shell():
         logger.info("-" * 50)
 
 def main():
+    """
+    Entry point for the SecureDrop application.
+    Initializes the SecureDrop utilities and logging, handles user registration,
+    and starts the Secure Drop shell for interacting with the application.
+    Ensures graceful shutdown in the event of exceptions or interruptions.
+    """
     sdutils = SecureDropUtils()
     
     logging.basicConfig(
@@ -145,10 +151,10 @@ def main():
         print("Exception:", e)
         logger.error(f"An error occurred: {e}")
         exit()
-    
-    if os.path.exists(sdutils.LOCK_FILE):
+        
+    with open(sdutils.LOCK_FILE, "r") as file:
         os.remove(sdutils.LOCK_FILE)
-        logger.info("Lock file freed")
+    logger.info("Lock file freed")
         
 if __name__ == "__main__":
     main()
