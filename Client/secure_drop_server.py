@@ -14,6 +14,7 @@ shutdown_event = threading.Event()
 def signal_handler(signum, frame):
     shutdown_event.set()
 
+
 def handle_client(conn, addr, sock):
     """
     Handles the communication with a connected client over a secure SSL/TLS connection.
@@ -256,6 +257,7 @@ def handle_client(conn, addr, sock):
         conn.close()
         return
 
+
 def discovery_server():
     """
     The server listens on a specified port for discovery requests from clients. When a valid
@@ -299,7 +301,39 @@ def discovery_server():
         client_socket.close()
         logger.info("Discovery server stopped {e}")
 
+
 def main():
+    """
+    Main function to initialize and manage the Secure Drop server.
+
+    This function is responsible for:
+    1. Setting up logging and global utilities for the server.
+    2. Ensuring only one instance of the server runs by managing a lock file.
+    3. Handling command-line arguments to retrieve a socket file descriptor.
+    4. Initializing the server's private key, public key, and user credentials.
+    5. Spawning a discovery server thread for auxiliary services.
+    6. Setting up and running a secure server socket to handle client connections.
+    7. Accepting incoming client connections and delegating them to `handle_client` in separate threads.
+    8. Gracefully handling shutdown signals and cleaning up resources such as the lock file and sockets.
+
+    Usage:
+        python secure_drop_server.py <socket_fd>
+        - `<socket_fd>`: File descriptor for the main socket passed as a command-line argument.
+
+    Notes:
+        - The server listens on a specified port (default 23325).
+        - Uses threading to handle multiple clients concurrently.
+        - Cleans up any stale lock files or processes from previous runs.
+        - Shuts down gracefully upon receiving termination signals (SIGINT or SIGTERM).
+
+    Exception Handling:
+        - Logs unexpected errors during execution.
+        - Ensures the main socket and lock file are cleaned up in the event of an error.
+
+    Returns:
+        None
+    """
+      
     sock = None
     try:
         sdutils = SecureDropUtils()

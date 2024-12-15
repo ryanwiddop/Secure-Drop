@@ -43,6 +43,7 @@ def _get_registered_user() -> bool:
         print("Exception: ", sys.exc_info()[0])
         return None
 
+
 def _register_new_user(username: str, email: str, password: str) -> None:
     """
     Registers a new user by hashing the password, encrypting the user data, 
@@ -79,6 +80,7 @@ def _register_new_user(username: str, email: str, password: str) -> None:
         print("Exception: ", e)
         sys.exit()
             
+
 def _verify_user(email: str, password: str) -> bool: 
     """
     Verifies the user's email and password by decrypting and verifying the stored user data.
@@ -126,6 +128,7 @@ def _verify_user(email: str, password: str) -> bool:
         print("Error verifying user")
         print("Exception:", e)
         return False
+                 
                  
 def startup() -> None:
     """

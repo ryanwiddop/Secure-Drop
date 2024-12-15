@@ -48,6 +48,7 @@ def _verify_contact_file() -> None:
         print("Exception:", e)
         sys.exit()
 
+
 def _discover_servers() -> list:
     """
     Discovers SecureDrop servers on the local network.
@@ -240,6 +241,7 @@ def sync_contacts():
             client_socket.close()
             continue
     
+
 def add_contact() -> None:
     """
     Adds a new contact to the contacts list.
@@ -292,6 +294,7 @@ def add_contact() -> None:
         logger.error(f"Error adding contact: {e}")
         sys.exit()
 
+
 def list_contacts() -> None:
     """
     Lists the contacts from the SecureDrop contacts file, displaying them as online or offline.
@@ -330,6 +333,7 @@ def list_contacts() -> None:
         print("An error occurred while listing the contacts.")
         print("Exception:", e)
         sys.exit()
+
 
 def send_file(email: str, path: str) -> None:
     """
@@ -437,7 +441,7 @@ def send_file(email: str, path: str) -> None:
             if server_email != email:
                 logger.warning(f"Incorrect email address for server {server}")
                 continue
-            
+
             if server_username == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
                 logger.warning(f"Server {server} has a contact mismatch")
                 continue
