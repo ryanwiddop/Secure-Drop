@@ -9,7 +9,7 @@ tempfile
 sys
 signal
 json
-pycryptodome (Crypto)
+pycryptodome
 cryptography
 getpass
 time

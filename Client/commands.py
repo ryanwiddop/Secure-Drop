@@ -364,7 +364,7 @@ def send_file(email: str, path: str) -> None:
         contacts = data["contacts"]
     for contact in contacts:
         if contact["email"].lower() == email.lower():
-            if not contact["online"]:
+            if contact["online"] == False:
                 print("  Contact is offline.")
                 return
     
@@ -433,6 +433,10 @@ def send_file(email: str, path: str) -> None:
             encrypted_server_email = client_socket.recv(1024)
             server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
             server_username = sdutils.pgp_decrypt_and_verify_data(encrypted_server_username, sender_public_key)
+            
+            if server_email != email:
+                logger.warning(f"Incorrect email address for server {server}")
+                continue
             
             if server_username == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
                 logger.warning(f"Server {server} has a contact mismatch")

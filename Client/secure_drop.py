@@ -145,10 +145,10 @@ def main():
         print("Exception:", e)
         logger.error(f"An error occurred: {e}")
         exit()
-        
-    with open(sdutils.LOCK_FILE, "r") as file:
+    
+    if os.path.exists(sdutils.LOCK_FILE):
         os.remove(sdutils.LOCK_FILE)
-    logger.info("Lock file freed")
+        logger.info("Lock file freed")
         
 if __name__ == "__main__":
     main()
