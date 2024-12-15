@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess, logging, socket, os
 from registration import startup
 from commands import add_contact, list_contacts, send_file
@@ -36,6 +34,7 @@ def start_secure_drop_server() -> tuple:
     parent_sock.sendall(encrypted_email)
     
     return process, parent_sock
+
 
 def secure_drop_shell():
     """
@@ -109,6 +108,7 @@ def secure_drop_shell():
             sock.close()
         logger.info("Exiting SecureDrop.")
         logger.info("-" * 50)
+
 
 def main():
     """
