@@ -111,8 +111,7 @@ class SecureDropUtils:
             )
             return result
         except Exception as e:
-            print("An error occurred while encrypting the data.")
-            print(f"Exception: {e}")
+            logger.error(f"An error occurred while encrypting the data: {e}")
             raise RuntimeError("An error occurred while encrypting the data.")
         
 
@@ -176,8 +175,7 @@ class SecureDropUtils:
             except ValueError:
                 raise ValueError("Signature verification failed.")
         except Exception as e:
-            print("An error occurred while decrypting the data.")
-            print(f"Exception: {e}")
+            logger.error(f"An error occurred while decrypting the data: {e}")
             return None
         
 
