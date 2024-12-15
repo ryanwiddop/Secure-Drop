@@ -17,6 +17,7 @@ class SecureDropUtils:
             cls._instance = super(SecureDropUtils, cls).__new__(cls, *args, **kwargs)
         return cls._instance
         
+
     def __init__(self):
         """
         Initializes the secure drop utility class with default file paths and attributes.
@@ -69,6 +70,7 @@ class SecureDropUtils:
         if not hasattr(self, "_email"):
             self._email = None
 
+
     def pgp_encrypt_and_sign_data(self, data: str, recipient_public_key: RSA.RsaKey) -> bytes:
         """
         Encrypts and signs the given data using PGP (Pretty Good Privacy) encryption.
@@ -113,6 +115,7 @@ class SecureDropUtils:
             print(f"Exception: {e}")
             raise RuntimeError("An error occurred while encrypting the data.")
         
+
     def pgp_decrypt_and_verify_data(self, data: bytes, sender_public_key: RSA.RsaKey) -> bytes:
         """
         Decrypts and verifies PGP encrypted data.
@@ -177,6 +180,7 @@ class SecureDropUtils:
             print(f"Exception: {e}")
             return None
         
+
     def encrypt_and_sign(self, data: bytes) -> bytes:
         """
         Encrypts and signs the given data using RSA and AES encryption.
@@ -224,6 +228,7 @@ class SecureDropUtils:
             print("Exception:", e)
             return None
             
+
     def decrypt_and_verify(self, data: bytes) -> bytes:
         """
         Decrypts and verifies the given encrypted data.
@@ -302,6 +307,7 @@ class SecureDropUtils:
             print("Exception:", e)
             return None
 
+
     def hash_data(self, data: str) -> str:
         """
         Hashes the provided data using SHA-512 with a random salt and returns the salted hash in base64 encoding.
@@ -329,6 +335,7 @@ class SecureDropUtils:
             print("Exception:", sys.exc_info()[0])
             return None
 
+
     def verify_hash(self, data: str, hashed_data: str) -> bool:
         """
         Verifies if the provided data matches the hashed data.
@@ -352,6 +359,7 @@ class SecureDropUtils:
             print("An error occurred while verifying the hash.")
             print("Exception:", sys.exc_info()[0])
             return False
+
 
     def verify_key_pair(self) -> None:
         """
@@ -389,6 +397,7 @@ class SecureDropUtils:
             print("Exception:", e)
             sys.exit()
                 
+
     def encrypt_private_key(self, password: str) -> None:
         """
         Encrypts the private key stored at the specified path using the provided password.
@@ -424,6 +433,7 @@ class SecureDropUtils:
         except:
             print("An error occurred while encrypting the private key with password.")
             print("Exception:", sys.exc_info()[0])
+    
     
     def decrypt_private_key(self, password: str) -> bool:
         """

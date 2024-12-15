@@ -1,4 +1,5 @@
 from secure_drop_utils import SecureDropUtils
+import traceback
 import os, json, sys, socket, logging, ssl, time, tempfile
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -48,6 +49,7 @@ def _verify_contact_file() -> None:
         print("Exception:", e)
         sys.exit()
 
+
 def _discover_servers() -> list:
     """
     Discovers SecureDrop servers on the local network.
@@ -94,6 +96,7 @@ def _discover_servers() -> list:
             pass
         except Exception as e:
             logger.info(f"Exception caught while syncing contacts: {addr}: {e}")
+            logger.error(traceback.format_exc())
         if time.time() - start_time > 2:
             break
     client_discovery_socket.close() 
@@ -237,9 +240,11 @@ def sync_contacts():
             client_socket.close()
         except Exception as e:
             logger.error(f"Failed to sync contacts: {e}")
+            logger.error(traceback.format_exc())
             client_socket.close()
             continue
     
+
 def add_contact() -> None:
     """
     Adds a new contact to the contacts list.
@@ -292,6 +297,7 @@ def add_contact() -> None:
         logger.error(f"Error adding contact: {e}")
         sys.exit()
 
+
 def list_contacts() -> None:
     """
     Lists the contacts from the SecureDrop contacts file, displaying them as online or offline.
@@ -331,6 +337,7 @@ def list_contacts() -> None:
         print("Exception:", e)
         sys.exit()
 
+
 def send_file(email: str, path: str) -> None:
     """
     Sends a file to a list of discovered servers using a secure connection.
@@ -364,7 +371,7 @@ def send_file(email: str, path: str) -> None:
         contacts = data["contacts"]
     for contact in contacts:
         if contact["email"].lower() == email.lower():
-            if contact["online"] == False:
+            if not contact["online"]:
                 print("  Contact is offline.")
                 return
     
@@ -433,10 +440,6 @@ def send_file(email: str, path: str) -> None:
             encrypted_server_email = client_socket.recv(1024)
             server_email = sdutils.pgp_decrypt_and_verify_data(encrypted_server_email, sender_public_key)
             server_username = sdutils.pgp_decrypt_and_verify_data(encrypted_server_username, sender_public_key)
-            
-            if server_email != email:
-                logger.warning(f"Incorrect email address for server {server}")
-                continue
             
             if server_username == "CONTACT_MISMATCH" or server_email == "CONTACT_MISMATCH":
                 logger.warning(f"Server {server} has a contact mismatch")
