@@ -88,10 +88,6 @@
     15. If the user is online, their entry in the contacts json will be marked with online as true.
     16. Once all contacts are synced, all online contacts are printed.
 
-Here's the corresponding **Milestone 5 - Secure File Transfer** write-up in the same style as your previous **Milestone 4**:
-
----
-
 ## Milestone 5 - Secure File Transfer
 
 1. The user sends a file securely to a server:
