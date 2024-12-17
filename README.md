@@ -88,5 +88,29 @@
     15. If the user is online, their entry in the contacts json will be marked with online as true.
     16. Once all contacts are synced, all online contacts are printed.
 
-## Milestone 5 - 
-  1.
+Here's the corresponding **Milestone 5 - Secure File Transfer** write-up in the same style as your previous **Milestone 4**:
+
+---
+
+## Milestone 5 - Secure File Transfer
+
+1. The user sends a file securely to a server:
+    1. The client synchronizes contacts to ensure server availability and online status.
+    2. A list of servers is discovered on the network using UDP broadcast over port 23326.
+    3. A TCP connection is established to each discovered server on port 23325.
+    4. The TCP socket is wrapped in a TLS context using the client’s certificate chain (certificate and private key) and the CA certificate.
+    5. The server’s public certificate is verified during the TLS handshake.
+    6. A PGP-encrypted shared secret key and challenge are received from the server and decrypted by the client.
+    7. A challenge hash is created using HMAC with the shared secret key and challenge.
+    8. The challenge hash is PGP-encrypted with the server’s public key and sent back to the server.
+    9. If the server successfully verifies the challenge hash *(or terminates the connection otherwise)*, the command "SEND_FILE" is sent to the server.
+    10. The client’s username and email are encrypted using PGP and sent to the server.
+    11. The server’s encrypted username and email are received, decrypted, and verified:
+        - If there is a mismatch, the client logs "CONTACT_MISMATCH" and terminates the connection.
+    12. The client encrypts and sends the file name using PGP.
+    13. The file content is read and encrypted:
+        - If the file is a text file, it is read as a string and encrypted.
+        - If the file is binary, it is read in byte format and converted to a hexadecimal representation before encryption.
+    14. The file size and file type (text or binary) are encrypted and sent to the server.
+    15. The file is transmitted in encrypted chunks of 8 KB until the entire file has been sent.
+    16. Once the file transfer is complete, the connection is gracefully closed.
