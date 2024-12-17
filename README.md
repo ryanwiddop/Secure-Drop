@@ -89,3 +89,4 @@
     16. Once all contacts are synced, all online contacts are printed.
 
 ## Milestone 5 - 
+  1.
